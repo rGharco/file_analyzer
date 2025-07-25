@@ -53,3 +53,14 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+#VSCODE
+.vscode/tasks.json
+
+
+# EXE and build
+/build/
+*.o
+*.out
+*.exe
+bin.dat

@@ -55,7 +55,7 @@ dkms.conf
 *.dwo
 
 #VSCODE
-.vscode/tasks.json
+.vscode/
 
 
 # EXE and build
@@ -64,3 +64,5 @@ dkms.conf
 *.out
 *.exe
 bin.dat
+.bin/
+./bin/*.exe

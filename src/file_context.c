@@ -25,6 +25,7 @@ File_Context* create_file_context(const char* path, const char* mode) {
 
     if(file_context == NULL) {
         printf("[-] Failed to allocate memory to file context!\n");
+        fclose(file);
         return NULL;
     }
 
@@ -34,6 +35,7 @@ File_Context* create_file_context(const char* path, const char* mode) {
 
     if(file_context->path == NULL) {
         printf("[-] Failed to allocate memory to file_context path!\n");
+        fclose(file_context->file);
         free(file_context);
         return NULL;
     }
@@ -44,8 +46,9 @@ File_Context* create_file_context(const char* path, const char* mode) {
 
     if(file_context->mode == NULL) {
         printf("[-] Failed to allocate memory to file_context mode!\n");
-        free(file_context);
+        fclose(file_context->file);
         free(file_context->path);
+        free(file_context);
         return NULL;
     }
 
@@ -55,7 +58,12 @@ File_Context* create_file_context(const char* path, const char* mode) {
 
     if(size == 0) {
         file_context->buffer = NULL;
-        printf("[-] Could not initialize reading buffer. File size is 0\n");
+        printf("[-] Failed to initialize reading buffer. File size is 0\n");
+        fclose(file_context->file);
+        free(file_context->path);
+        free(file_context->mode);
+        free(file_context);
+        return NULL;
     }
     else {
         file_context->buffer = malloc(size);
@@ -63,12 +71,23 @@ File_Context* create_file_context(const char* path, const char* mode) {
 
     file_context->size = size;
 
+    file_context->coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
+    
+    if(file_context->coff_header == NULL) {
+        printf("[-] Failed to initialize COFF header!\n");
+        fclose(file_context->file);
+        free(file_context->path);
+        free(file_context->mode);
+        free(file_context->buffer);
+        free(file_context);
+        return NULL;
+    }
+
     /******* Default initializers *************/
     
     file_context->is_pe = false;
     file_context->has_ms_dos_signature = false;
     file_context->pe_signature_start_byte = 0x0;
-    file_context->time_date_stamp = 0x0;
 
     /******* Default initializers *************/
 
@@ -98,5 +117,6 @@ void free_file_context(File_Context* file_context) {
     if (file_context->path) free(file_context->path);
     if (file_context->mode) free(file_context->mode);
     if (file_context->buffer) free(file_context->buffer);
+    if (file_context->coff_header) free(file_context->coff_header);
     free(file_context);
 }

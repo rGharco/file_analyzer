@@ -59,14 +59,8 @@ int main(int argc, char* argv[]) {
 	if(strcmp(argv[2], "-e") == 0) {
 		if(is_executable(file_context,&ms_dos,&pe_signature)) {
 			set_pe_flag(file_context);
-
-			fseek(file_context->file,4,SEEK_CUR);
-
-			uint32_t timestamp;
-			fread(&timestamp, sizeof(uint32_t),1,file_context->file);
-
-			time_t time = (time_t)timestamp;
-   			printf("Local time: %s", asctime(localtime(&time)));	
+			
+			parse_coff_header(&file_context);
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
 		}

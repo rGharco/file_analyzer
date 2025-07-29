@@ -1,6 +1,9 @@
 #include "../include/pe_utils.h"
 #include <string.h>
+#include <stdlib.h>
 #include "../include/constants.h"
+#include <time.h>
+#include "../include/print_helper.h"
 
 bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
     if (fread(file_context->buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
@@ -57,6 +60,8 @@ bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature) {
 }
 
 bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature) {
+	print_action("CHECKING IF FILE IS EXECUTABLE");
+
 	if(!matches_ms_dos_signature(file_context,ms_dos)) {
 		printf("[-] Abort: Failed to match MS_DOS stub!\n");
 		return false;
@@ -75,6 +80,65 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 	}
 
 	printf("[+] Successfully read the PE signature!\n");
-	printf("[+] File is an executable!\n");
+	printf("[+] File is an executable!\n\n");
+
+	print_action("CHECKING IF FILE IS EXECUTABLE");
+
 	return true;
+}
+
+void print_coff_header(const File_Context* file_context);
+
+void parse_coff_header(File_Context** file_context) {
+
+	print_action("PARSING COFF HEADER");
+
+	if(file_context == NULL) {
+		printf("[-] Failed to pass COFF header. File context is NULL!\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	if(fseek((*file_context)->file,(*file_context)->pe_signature_start_byte+PE_SIGNATURE_LENGTH, SEEK_SET) != 0) {
+		printf("[-] Failed to go to COFF header. fseek() failed!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	COFF_Header* coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
+
+	if(coff_header == NULL) {
+		printf("[-] Failed to initialize coff header struct!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if(fread(coff_header, sizeof(COFF_Header), 1, (*file_context)->file) == 0) {
+		printf("[-] Could not read bytes for COFF header! fread() returned 0!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	(*file_context)->coff_header = coff_header;
+
+	printf("[+] Successfully parsed COFF header! -> printing information: \n");
+
+	print_coff_header(*(file_context));
+
+	print_action("PARSING COFF HEADER");
+}
+
+void print_coff_header(const File_Context* file_context) {
+	if(file_context->coff_header == NULL) {
+		printf("[-] Failed to read COFF header. COFF header is NULL!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("\t[INFO] Machine Type: 0x%X\n", file_context->coff_header->machine);
+	printf("\t[INFO] Number of sections: 0x%X\n", file_context->coff_header->number_of_sections);
+
+	uint32_t timestamp = file_context->coff_header->time_date_stamp;
+	time_t time = (time_t)timestamp;
+
+	printf("\t[INFO] TimeDateStamp: %s", asctime(localtime(&time)));
+	printf("\t[INFO] PointerToSymbolTable: 0x%X\n", file_context->coff_header->pointer_to_symbol_table);
+	printf("\t[INFO] NumberOfSymbols: 0x%X\n", file_context->coff_header->number_of_symbols);
+	printf("\t[INFO] SizeOfOptionalHeader: 0x%X\n", file_context->coff_header->size_of_optional_header);
+	printf("\t[INFO] Characteristics: 0x%X\n", file_context->coff_header->characteristics);
 }

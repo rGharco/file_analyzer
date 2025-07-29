@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "../include/coff_header.h"
 
 typedef struct {
     FILE* file;
@@ -14,7 +15,7 @@ typedef struct {
     bool has_ms_dos_signature;
     uint32_t pe_signature_start_byte;
     bool is_pe;
-    uint32_t time_date_stamp;
+    COFF_Header* coff_header;
 } File_Context;
 
 File_Context* create_file_context(const char* path, const char* mode);

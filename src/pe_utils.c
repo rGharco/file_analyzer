@@ -90,39 +90,44 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 void print_coff_header(const File_Context* file_context);
 
 void parse_coff_header(File_Context** file_context) {
+    print_action("PARSING COFF HEADER");
 
-	print_action("PARSING COFF HEADER");
+    if (file_context == NULL || *file_context == NULL) {
+        printf("[-] Failed to pass COFF header. File context is NULL!\n");
+        exit(EXIT_FAILURE);
+    }
 
-	if(file_context == NULL) {
-		printf("[-] Failed to pass COFF header. File context is NULL!\n");
-		exit(EXIT_FAILURE);
-	}
-	
-	if(fseek((*file_context)->file,(*file_context)->pe_signature_start_byte+PE_SIGNATURE_LENGTH, SEEK_SET) != 0) {
-		printf("[-] Failed to go to COFF header. fseek() failed!\n");
-		exit(EXIT_FAILURE);
-	}
+    if ((*file_context)->is_pe == false) {
+        printf("[-] Failed to pass COFF header. File is not executable!\n");
+        exit(EXIT_FAILURE);
+    }
 
-	COFF_Header* coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
+    if (fseek((*file_context)->file, (*file_context)->pe_signature_start_byte + PE_SIGNATURE_LENGTH, SEEK_SET) != 0) {
+        printf("[-] Failed to go to COFF header. fseek() failed!\n");
+        exit(EXIT_FAILURE);
+    }
 
-	if(coff_header == NULL) {
-		printf("[-] Failed to initialize coff header struct!\n");
-		exit(EXIT_FAILURE);
-	}
+    COFF_Header* coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
+    if (coff_header == NULL) {
+        printf("[-] Failed to allocate memory for COFF header! parse_coff_header() failed!\n");
+        exit(EXIT_FAILURE);
+    }
 
-	if(fread(coff_header, sizeof(COFF_Header), 1, (*file_context)->file) == 0) {
-		printf("[-] Could not read bytes for COFF header! fread() returned 0!\n");
-		exit(EXIT_FAILURE);
-	}
+    if (fread(coff_header, sizeof(COFF_Header), 1, (*file_context)->file) != 1) {
+        printf("[-] Could not read bytes for COFF header! fread() failed!\n");
+        free(coff_header);
+        exit(EXIT_FAILURE);
+    }
 
-	(*file_context)->coff_header = coff_header;
+    (*file_context)->coff_header = coff_header;
 
-	printf("[+] Successfully parsed COFF header! -> printing information: \n");
+    printf("[+] Successfully parsed COFF header! -> printing information: \n");
 
-	print_coff_header(*(file_context));
+    print_coff_header(*file_context);
 
-	print_action("PARSING COFF HEADER");
+    print_action("PARSING COFF HEADER");
 }
+
 
 void print_coff_header(const File_Context* file_context) {
 	if(file_context->coff_header == NULL) {
@@ -130,7 +135,7 @@ void print_coff_header(const File_Context* file_context) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("\t[INFO] Machine Type: 0x%X\n", file_context->coff_header->machine);
+	printf("\t[INFO] Machine Type: %s\n", get_machine_type_name(file_context->coff_header->machine));
 	printf("\t[INFO] Number of sections: 0x%X\n", file_context->coff_header->number_of_sections);
 
 	uint32_t timestamp = file_context->coff_header->time_date_stamp;
@@ -141,4 +146,84 @@ void print_coff_header(const File_Context* file_context) {
 	printf("\t[INFO] NumberOfSymbols: 0x%X\n", file_context->coff_header->number_of_symbols);
 	printf("\t[INFO] SizeOfOptionalHeader: 0x%X\n", file_context->coff_header->size_of_optional_header);
 	printf("\t[INFO] Characteristics: 0x%X\n", file_context->coff_header->characteristics);
+}
+
+const char* get_machine_type_name(uint16_t machine_type) {
+    switch(machine_type) {
+        case 0x0000: return "IMAGE_FILE_MACHINE_UNKNOWN";
+        case 0x0184: return "IMAGE_FILE_MACHINE_ALPHA";
+        case 0x0284: return "IMAGE_FILE_MACHINE_ALPHA64 / AXP64";
+        case 0x01D3: return "IMAGE_FILE_MACHINE_AM33";
+        case 0x8664: return "IMAGE_FILE_MACHINE_AMD64 (x64)";
+        case 0x01C0: return "IMAGE_FILE_MACHINE_ARM (ARM Little Endian)";
+        case 0xAA64: return "IMAGE_FILE_MACHINE_ARM64 (ARM64 Little Endian)";
+        case 0xA641: return "IMAGE_FILE_MACHINE_ARM64EC (ARM64 + x64 interop)";
+        case 0xA64E: return "IMAGE_FILE_MACHINE_ARM64X (Mixed ARM64 & ARM64EC)";
+        case 0x01C4: return "IMAGE_FILE_MACHINE_ARMNT (Thumb-2 Little Endian)";
+        case 0x0EBC: return "IMAGE_FILE_MACHINE_EBC (EFI Byte Code)";
+        case 0x014C: return "IMAGE_FILE_MACHINE_I386 (x86)";
+        case 0x0200: return "IMAGE_FILE_MACHINE_IA64 (Itanium)";
+        case 0x6232: return "IMAGE_FILE_MACHINE_LOONGARCH32";
+        case 0x6264: return "IMAGE_FILE_MACHINE_LOONGARCH64";
+        case 0x9041: return "IMAGE_FILE_MACHINE_M32R (Mitsubishi M32R)";
+        case 0x0266: return "IMAGE_FILE_MACHINE_MIPS16";
+        case 0x0366: return "IMAGE_FILE_MACHINE_MIPSFPU";
+        case 0x0466: return "IMAGE_FILE_MACHINE_MIPSFPU16";
+        case 0x01F0: return "IMAGE_FILE_MACHINE_POWERPC (Little Endian)";
+        case 0x01F1: return "IMAGE_FILE_MACHINE_POWERPCFP (w/ Floating Point)";
+        case 0x0160: return "IMAGE_FILE_MACHINE_R3000BE (MIPS Big Endian)";
+        case 0x0162: return "IMAGE_FILE_MACHINE_R3000 (MIPS Little Endian)";
+        case 0x0166: return "IMAGE_FILE_MACHINE_R4000 (MIPS III 64-bit)";
+        case 0x0168: return "IMAGE_FILE_MACHINE_R10000 (MIPS IV 64-bit)";
+        case 0x5032: return "IMAGE_FILE_MACHINE_RISCV32";
+        case 0x5064: return "IMAGE_FILE_MACHINE_RISCV64";
+        case 0x5128: return "IMAGE_FILE_MACHINE_RISCV128";
+        case 0x01A2: return "IMAGE_FILE_MACHINE_SH3";
+        case 0x01A3: return "IMAGE_FILE_MACHINE_SH3DSP";
+        case 0x01A6: return "IMAGE_FILE_MACHINE_SH4";
+        case 0x01A8: return "IMAGE_FILE_MACHINE_SH5";
+        case 0x01C2: return "IMAGE_FILE_MACHINE_THUMB";
+        case 0x0169: return "IMAGE_FILE_MACHINE_WCEMIPSV2";
+        default:     return "Unknown or unsupported machine type";
+    }
+}
+
+void parse_optional_header(File_Context** file_context) {
+    if (file_context == NULL || *file_context == NULL) {
+        printf("[-] Failed to parse optional header! file_context is NULL!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    uint32_t optional_header_offset = (*file_context)->pe_signature_start_byte + PE_SIGNATURE_LENGTH + COFF_HEADER_BYTES;
+
+    if (fseek((*file_context)->file, optional_header_offset, SEEK_SET) != 0) { 
+        printf("[-] Failed to go to optional header offset! parse_optional_header() failed!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    Optional_Header* optional_header = (Optional_Header*)malloc(sizeof(Optional_Header));
+    if (optional_header == NULL) {
+        printf("[-] Failed to allocate memory for optional header! parse_optional_header() failed!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fread(optional_header, sizeof(Optional_Header), 1, (*file_context)->file) != 1) {
+        printf("[-] Failed to read optional header! parse_optional_header() failed!\n");
+        free(optional_header);
+        exit(EXIT_FAILURE);
+    }
+
+    (*file_context)->optional_header = optional_header;
+
+    printf("[+] Successfully parsed Optional header! -> printing information: \n");
+}
+
+
+void print_optional_header(const File_Context* file_context) {
+	if(file_context->optional_header == NULL) {
+		printf("[-] Failed to read Optional header. Optional header is NULL! print_optional_header() failed!\n");
+		exit(EXIT_FAILURE);
+	}
+
+
 }

@@ -61,6 +61,7 @@ int main(int argc, char* argv[]) {
 			set_pe_flag(file_context);
 			
 			parse_coff_header(&file_context);
+			parse_optional_header(&file_context);
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
 		}

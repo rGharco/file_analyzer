@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../include/coff_header.h"
+#include "../include/optional_header.h"
 
 typedef struct {
     FILE* file;
@@ -16,6 +17,8 @@ typedef struct {
     uint32_t pe_signature_start_byte;
     bool is_pe;
     COFF_Header* coff_header;
+    Optional_Header* optional_header;
+    
 } File_Context;
 
 File_Context* create_file_context(const char* path, const char* mode);

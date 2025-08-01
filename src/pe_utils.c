@@ -5,16 +5,29 @@
 #include <time.h>
 #include "../include/print_helper.h"
 
+bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos);
+uint32_t get_pe_header_offset(File_Context* file_context);
+bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature);
+bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature);
+
+void print_coff_header(const File_Context* file_context);
+void print_coff_header(const File_Context* file_context);
+
+const char* get_machine_type_name(uint16_t machine_type);
+
+void parse_optional_header(File_Context** file_context);
+void print_optional_header(const File_Context* file_context);
+
 bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
     if (fread(file_context->buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
-        printf("[-] Could not read the bytes necessary to match MS-DOS signature!\n");
+        print_error("Could not read the bytes necessary to match MS-DOS signature!");
         return false;
     }
 
     printf("[+] Successfully read bytes to check MS-DOS stub\n");
 
     if (memcmp(file_context->buffer, ms_dos->bytes, ms_dos->number_of_bytes) != 0) {
-        printf("[-] Could not match the MS-DOS signature!\n");
+        print_error("Could not match the MS-DOS signature!");
         return false;
     }
 
@@ -27,12 +40,12 @@ uint32_t get_pe_header_offset(File_Context* file_context) {
 	uint32_t pe_signature_start_byte;
 
 	if(fseek(file_context->file, PE_HEADER_OFFSET,SEEK_SET) != 0) {
-		printf("[-] Could not go to PE header offset!\n");
+		print_error("Could not go to PE header offset!");
 		return UINT32_MAX;
 	}
 
 	if (fread(&pe_signature_start_byte, sizeof(uint32_t), 1, file_context->file) != 1) {
-		printf("[-] Could not read PE header byte at offset!\n");
+		print_error("Could not read PE header byte at offset!");
 		return UINT32_MAX;
 	}
 
@@ -45,14 +58,14 @@ bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature) {
 	uint8_t pe_signature_bytes_read[PE_SIGNATURE_BYTES];
 
 	if(fseek(file_context->file,file_context->pe_signature_start_byte,SEEK_SET) != 0 ) {
-		printf("[-] Could not go to offset indicated by PE header byte!\n");
+		print_error("Could not go to offset indicated by PE header byte!");
 		return false;
 	}
 
 	printf("[+] Successfully found the PE signature offset!\n");
 
 	if (fread(pe_signature_bytes_read, sizeof(uint8_t), PE_SIGNATURE_BYTES, file_context->file) != pe_signature->number_of_bytes) {
-		printf("[-] Could not read number of bytes at PE signature offset!\n");
+		print_error("Could not read number of bytes at PE signature offset!");
 		return false;
 	}
 
@@ -63,19 +76,19 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 	print_action("CHECKING IF FILE IS EXECUTABLE");
 
 	if(!matches_ms_dos_signature(file_context,ms_dos)) {
-		printf("[-] Abort: Failed to match MS_DOS stub!\n");
+		print_error("Abort: Failed to match MS_DOS stub!");
 		return false;
 	}
 
 	uint32_t pe_signature_start_byte = get_pe_header_offset(file_context);
 
 	if(pe_signature_start_byte == UINT32_MAX) {
-		printf("[-] Abort: Failed to get PE header offset!\n");
-		return false;
+		print_error("Abort: Failed to get PE header offset!");
+        return false;
 	}
 
 	if(!has_pe_signature(file_context, pe_signature)) {
-		printf("[-] Abort: Failed to get PE signature!\n");
+		print_error("Abort: Failed to get PE signature!");
 		return false;
 	}
 
@@ -87,36 +100,29 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 	return true;
 }
 
-void print_coff_header(const File_Context* file_context);
-
-void parse_coff_header(File_Context** file_context) {
+bool parse_coff_header(File_Context** file_context) {
     print_action("PARSING COFF HEADER");
 
     if (file_context == NULL || *file_context == NULL) {
-        printf("[-] Failed to pass COFF header. File context is NULL!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if ((*file_context)->is_pe == false) {
-        printf("[-] Failed to pass COFF header. File is not executable!\n");
-        exit(EXIT_FAILURE);
+        print_error("Failed to parse optional header! file_context is NULL!");
+        return false;
     }
 
     if (fseek((*file_context)->file, (*file_context)->pe_signature_start_byte + PE_SIGNATURE_LENGTH, SEEK_SET) != 0) {
-        printf("[-] Failed to go to COFF header. fseek() failed!\n");
-        exit(EXIT_FAILURE);
+        print_error("Failed to go to COFF header. fseek() failed!");
+        return false;
     }
 
     COFF_Header* coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
     if (coff_header == NULL) {
-        printf("[-] Failed to allocate memory for COFF header! parse_coff_header() failed!\n");
-        exit(EXIT_FAILURE);
+        print_error("Failed to allocate memory for COFF header! parse_coff_header() failed!");
+        return false;
     }
 
     if (fread(coff_header, sizeof(COFF_Header), 1, (*file_context)->file) != 1) {
-        printf("[-] Could not read bytes for COFF header! fread() failed!\n");
+        print_error("Could not read bytes for COFF header! fread() failed!");
         free(coff_header);
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     (*file_context)->coff_header = coff_header;
@@ -126,12 +132,13 @@ void parse_coff_header(File_Context** file_context) {
     print_coff_header(*file_context);
 
     print_action("PARSING COFF HEADER");
-}
 
+    return true;
+}
 
 void print_coff_header(const File_Context* file_context) {
 	if(file_context->coff_header == NULL) {
-		printf("[-] Failed to read COFF header. COFF header is NULL!\n");
+		print_error("Failed to read COFF header. COFF header is NULL!");
 		exit(EXIT_FAILURE);
 	}
 
@@ -190,25 +197,25 @@ const char* get_machine_type_name(uint16_t machine_type) {
 
 void parse_optional_header(File_Context** file_context) {
     if (file_context == NULL || *file_context == NULL) {
-        printf("[-] Failed to parse optional header! file_context is NULL!\n");
+        print_error("Failed to parse optional header! file_context is NULL!");
         exit(EXIT_FAILURE);
     }
 
     uint32_t optional_header_offset = (*file_context)->pe_signature_start_byte + PE_SIGNATURE_LENGTH + COFF_HEADER_BYTES;
 
     if (fseek((*file_context)->file, optional_header_offset, SEEK_SET) != 0) { 
-        printf("[-] Failed to go to optional header offset! parse_optional_header() failed!\n");
+        print_error("Failed to go to optional header offset! parse_optional_header() failed!");
         exit(EXIT_FAILURE);
     }
 
     Optional_Header* optional_header = (Optional_Header*)malloc(sizeof(Optional_Header));
     if (optional_header == NULL) {
-        printf("[-] Failed to allocate memory for optional header! parse_optional_header() failed!\n");
+        print_error("Failed to allocate memory for optional header! parse_optional_header() failed!");
         exit(EXIT_FAILURE);
     }
 
     if (fread(optional_header, sizeof(Optional_Header), 1, (*file_context)->file) != 1) {
-        printf("[-] Failed to read optional header! parse_optional_header() failed!\n");
+        print_error("Failed to read optional header! parse_optional_header() failed!");
         free(optional_header);
         exit(EXIT_FAILURE);
     }
@@ -218,10 +225,9 @@ void parse_optional_header(File_Context** file_context) {
     printf("[+] Successfully parsed Optional header! -> printing information: \n");
 }
 
-
 void print_optional_header(const File_Context* file_context) {
 	if(file_context->optional_header == NULL) {
-		printf("[-] Failed to read Optional header. Optional header is NULL! print_optional_header() failed!\n");
+		print_error("Failed to read Optional header. Optional header is NULL! print_optional_header() failed!");
 		exit(EXIT_FAILURE);
 	}
 

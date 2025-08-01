@@ -5,5 +5,7 @@
 #include <stdio.h>
 
 void print_action(const char* message);
+void print_error(const char* message);
+void print_warning(const char* messsage);
 
 #endif

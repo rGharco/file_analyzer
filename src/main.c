@@ -4,6 +4,7 @@
 #include "../include/file_context.h"
 #include "../include/pe_utils.h"
 #include "../include/constants.h"
+#include "../include/print_helper.h"
 #include <time.h>
 
 #define BINARY_READ "rb"
@@ -60,7 +61,10 @@ int main(int argc, char* argv[]) {
 		if(is_executable(file_context,&ms_dos,&pe_signature)) {
 			set_pe_flag(file_context);
 			
-			parse_coff_header(&file_context);
+			if (!parse_coff_header(&file_context)) {
+				print_error("Failed to parse COFF header! parse_coff_header() failed!");
+			}
+
 			parse_optional_header(&file_context);
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);

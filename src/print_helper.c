@@ -18,3 +18,11 @@ void print_action(const char* message) {
 	}
 	printf(" %s\n\n", tag);
 }
+
+void print_error(const char* message) {
+	printf("[-] %s\n", message);
+}
+
+void print_warning(const char* message) {
+	printf("[!] Warning: %s\n", message);
+}

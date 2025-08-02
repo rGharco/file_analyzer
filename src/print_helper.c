@@ -1,5 +1,14 @@
 #include "../include/print_helper.h"
 
+void print_usage(const char* main_exe) {
+    printf("\nUsage: %s <filename> -<flag>\n\n"
+           "Flags:\n"
+           "  -b  -> scans for a binary file and matches patterns\n"
+           "  -e  -> scans for an executable file and finds information\n\n",
+           main_exe);
+}
+
+
 void print_action(const char* message) {
 	const uint8_t message_length = 100;
 	const char* tag = "[ACTION]";

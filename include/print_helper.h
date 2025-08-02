@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
+void print_usage(const char* main_exe);
 void print_action(const char* message);
 void print_error(const char* message);
 void print_warning(const char* messsage);

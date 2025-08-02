@@ -28,7 +28,7 @@ void find_patterns(const uint8_t* buffer, const Pattern* array, size_t bytes_rea
 int main(int argc, char* argv[]) {
 
 	if(argc < 2) {
-		printf("Usage: %s <filename>\n", argv[0]);
+		print_usage(argv[0]);
     	exit(EXIT_FAILURE);
 	}
 
@@ -61,11 +61,12 @@ int main(int argc, char* argv[]) {
 		if(is_executable(file_context,&ms_dos,&pe_signature)) {
 			set_pe_flag(file_context);
 			
-			if (!parse_coff_header(&file_context)) {
+			if (!parse_coff_header(file_context)) {
 				print_error("Failed to parse COFF header! parse_coff_header() failed!");
 			}
+			
+			parse_optional_header(file_context);
 
-			parse_optional_header(&file_context);
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
 		}

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#pragma pack(push,1)
+
 typedef struct {
     uint16_t machine;
     uint16_t number_of_sections;
@@ -12,5 +14,7 @@ typedef struct {
     uint16_t size_of_optional_header;
     uint16_t characteristics;
 } COFF_Header;
+
+#pragma pack(pop)
 
 #endif

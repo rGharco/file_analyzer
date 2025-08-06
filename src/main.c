@@ -65,8 +65,11 @@ int main(int argc, char* argv[]) {
 				print_error("Failed to parse COFF header! parse_coff_header() failed!");
 			}
 			
-			parse_optional_header(file_context);
+			if(!parse_optional_header(file_context)) {
+				print_error("Failed to parse Optional header! parse_optional_header() failed!");
+			}
 
+			parse_section_header(file_context);
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
 		}

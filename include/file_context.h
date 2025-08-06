@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "../include/coff_header.h"
 #include "../include/optional_header.h"
+#include "../include/section_header.h"
 
 typedef struct {
     FILE* file;
@@ -18,7 +19,7 @@ typedef struct {
     bool is_pe;
     COFF_Header* coff_header;
     Optional_Header* optional_header;
-    
+    Section_Header* section_header;
 } File_Context;
 
 File_Context* create_file_context(const char* path, const char* mode);

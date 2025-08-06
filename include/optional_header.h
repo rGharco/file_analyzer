@@ -7,6 +7,8 @@
 
 #define NUM_DATA_DIRECTORIES 16
 
+#pragma pack(push,1)
+
 typedef struct {
     // Standard fields                   
     uint8_t  MajorLinkerVersion;
@@ -45,6 +47,10 @@ typedef struct {
     Data_Directory DataDirectory[NUM_DATA_DIRECTORIES];
 } Optional_Header_PE32;
 
+#pragma pack(pop)
+
+#pragma pack(push,1)
+
 typedef struct {
     // Standard fields                    
     uint8_t  MajorLinkerVersion;
@@ -82,10 +88,10 @@ typedef struct {
     Data_Directory DataDirectory[NUM_DATA_DIRECTORIES];
 } Optional_Header_PE32Plus;
 
+#pragma pack(pop)
 
 typedef struct {
     uint16_t magic_number;
-    bool is_pe32_plus;
 
     union {
         Optional_Header_PE32 pe32;

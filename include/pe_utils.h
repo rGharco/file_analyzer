@@ -16,5 +16,8 @@ bool get_magic_number(File_Context* file_context);
 bool parse_optional_header(File_Context* file_context);
 void print_optional_header_info(const Optional_Header* optional_header);
 
+bool parse_section_header(File_Context* file_context);
+void print_section_header(const Section_Header* section);
+
 
 #endif

@@ -72,6 +72,7 @@ File_Context* create_file_context(const char* path, const char* mode) {
     file_context->pe_signature_start_byte = 0x0;
     file_context->coff_header = NULL;
     file_context->optional_header = NULL;
+    file_context->section_header = NULL;
 
     /******* Default initializers *************/
 

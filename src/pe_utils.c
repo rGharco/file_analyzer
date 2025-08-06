@@ -23,6 +23,9 @@ bool get_magic_number(File_Context* file_context);
 bool parse_optional_header(File_Context* file_context);
 void print_optional_header_info(const Optional_Header* optional_header);
 
+bool parse_section_header(File_Context* file_context);
+void print_section_header(const Section_Header* section);
+
 bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
     if (fread(file_context->buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
         print_error("Could not read the bytes necessary to match MS-DOS signature!");
@@ -215,6 +218,8 @@ bool get_magic_number(File_Context* file_context) {
 }
 
 bool parse_optional_header(File_Context* file_context) {
+    print_action("PARSING OPTIONAL HEADER");
+
     if (file_context == NULL) {
         print_error("file_context is NULL! parse_optional_header() failed!");
         return false;
@@ -242,26 +247,173 @@ bool parse_optional_header(File_Context* file_context) {
 
     switch(file_context->optional_header->magic_number) {
         case PE32:
-            if(fread(&file_context->optional_header->variant.pe32, OPTIONAL_HEADER_PE32_SIZE, 1,file_context->file) == 0) {
+            if(fread(&file_context->optional_header->variant.pe32, OPTIONAL_HEADER_PE32_SIZE-MAGIC_NUMBER_SIZE, 1,file_context->file) == 0) {
                 print_error("Failed to read bytes for Optional header! parse_optional_header() failed!");
                 goto cleanup;
             }
 
             break;
         case PE32_PLUS:
-            if(fread(&file_context->optional_header->variant.pe32, OPTIONAL_HEADER_PE32_PLUS_SIZE, 1,file_context->file) == 0) {
+            if(fread(&file_context->optional_header->variant.pe32_plus, OPTIONAL_HEADER_PE32_PLUS_SIZE-MAGIC_NUMBER_SIZE, 1,file_context->file) == 0) {
                 print_error("Failed to read bytes for Optional header! parse_optional_header() failed!");
                 goto cleanup;
             }
-            
+
             break;
     }
 
     printf("[+] Successfully parsed Optional header!\n");
     print_optional_header_info(file_context->optional_header);
+    print_action("PARSING OPTIONAL HEADER");
+
     return true;
 
 cleanup:
     free(optional_header);
     return false;
+}
+
+void print_optional_header_info(const Optional_Header* optional_header) {
+    if (optional_header == NULL) {
+        printf("[ERROR] Optional header is NULL!\n");
+        return;
+    }
+
+    switch (optional_header->magic_number) {
+        case PE32:
+            printf("[INFO] Optional Header (PE32):\n");
+            printf("[INFO] Major Linker Version: %u\n", optional_header->variant.pe32.MajorLinkerVersion);
+            printf("[INFO] Minor Linker Version: %u\n", optional_header->variant.pe32.MinorLinkerVersion);
+            printf("[INFO] Size of Code: 0x%X\n", optional_header->variant.pe32.SizeOfCode);
+            printf("[INFO] Size of Initialized Data: 0x%X\n", optional_header->variant.pe32.SizeOfInitializedData);
+            printf("[INFO] Size of Uninitialized Data: 0x%X\n", optional_header->variant.pe32.SizeOfUninitializedData);
+            printf("[INFO] Address of Entry Point: 0x%X\n", optional_header->variant.pe32.AddressOfEntryPoint);
+            printf("[INFO] Base of Code: 0x%X\n", optional_header->variant.pe32.BaseOfCode);
+            printf("[INFO] Base of Data: 0x%X\n", optional_header->variant.pe32.BaseOfData);
+            printf("[INFO] Image Base: 0x%X\n", optional_header->variant.pe32.ImageBase);
+            printf("[INFO] Section Alignment: 0x%X\n", optional_header->variant.pe32.SectionAlignment);
+            printf("[INFO] File Alignment: 0x%X\n", optional_header->variant.pe32.FileAlignment);
+            printf("[INFO] Major OS Version: %u\n", optional_header->variant.pe32.MajorOperatingSystemVersion);
+            printf("[INFO] Minor OS Version: %u\n", optional_header->variant.pe32.MinorOperatingSystemVersion);
+            printf("[INFO] Major Image Version: %u\n", optional_header->variant.pe32.MajorImageVersion);
+            printf("[INFO] Minor Image Version: %u\n", optional_header->variant.pe32.MinorImageVersion);
+            printf("[INFO] Major Subsystem Version: %u\n", optional_header->variant.pe32.MajorSubsystemVersion);
+            printf("[INFO] Minor Subsystem Version: %u\n", optional_header->variant.pe32.MinorSubsystemVersion);
+            printf("[INFO] Win32 Version Value: 0x%X\n", optional_header->variant.pe32.Win32VersionValue);
+            printf("[INFO] Size of Image: 0x%X\n", optional_header->variant.pe32.SizeOfImage);
+            printf("[INFO] Size of Headers: 0x%X\n", optional_header->variant.pe32.SizeOfHeaders);
+            printf("[INFO] CheckSum: 0x%X\n", optional_header->variant.pe32.CheckSum);
+            printf("[INFO] Subsystem: 0x%X\n", optional_header->variant.pe32.Subsystem);
+            printf("[INFO] Dll Characteristics: 0x%X\n", optional_header->variant.pe32.DllCharacteristics);
+            printf("[INFO] Size of Stack Reserve: 0x%X\n", optional_header->variant.pe32.SizeOfStackReserve);
+            printf("[INFO] Size of Stack Commit: 0x%X\n", optional_header->variant.pe32.SizeOfStackCommit);
+            printf("[INFO] Size of Heap Reserve: 0x%X\n", optional_header->variant.pe32.SizeOfHeapReserve);
+            printf("[INFO] Size of Heap Commit: 0x%X\n", optional_header->variant.pe32.SizeOfHeapCommit);
+            printf("[INFO] Loader Flags: 0x%X\n", optional_header->variant.pe32.LoaderFlags);
+            printf("[INFO] Number of RVA and Sizes: 0x%X\n", optional_header->variant.pe32.NumberOfRvaAndSizes);
+            break;
+
+        case PE32_PLUS:
+            printf("[INFO] Optional Header (PE32+):\n");
+            printf("[INFO] Major Linker Version: %u\n", optional_header->variant.pe32_plus.MajorLinkerVersion);
+            printf("[INFO] Minor Linker Version: %u\n", optional_header->variant.pe32_plus.MinorLinkerVersion);
+            printf("[INFO] Size of Code: 0x%X\n", optional_header->variant.pe32_plus.SizeOfCode);
+            printf("[INFO] Size of Initialized Data: 0x%X\n", optional_header->variant.pe32_plus.SizeOfInitializedData);
+            printf("[INFO] Size of Uninitialized Data: 0x%X\n", optional_header->variant.pe32_plus.SizeOfUninitializedData);
+            printf("[INFO] Address of Entry Point: 0x%X\n", optional_header->variant.pe32_plus.AddressOfEntryPoint);
+            printf("[INFO] Base of Code: 0x%X\n", optional_header->variant.pe32_plus.BaseOfCode);
+            printf("[INFO] Image Base: 0x%llX\n", (unsigned long long)optional_header->variant.pe32_plus.ImageBase);
+            printf("[INFO] Section Alignment: 0x%X\n", optional_header->variant.pe32_plus.SectionAlignment);
+            printf("[INFO] File Alignment: 0x%X\n", optional_header->variant.pe32_plus.FileAlignment);
+            printf("[INFO] Major OS Version: %u\n", optional_header->variant.pe32_plus.MajorOperatingSystemVersion);
+            printf("[INFO] Minor OS Version: %u\n", optional_header->variant.pe32_plus.MinorOperatingSystemVersion);
+            printf("[INFO] Major Image Version: %u\n", optional_header->variant.pe32_plus.MajorImageVersion);
+            printf("[INFO] Minor Image Version: %u\n", optional_header->variant.pe32_plus.MinorImageVersion);
+            printf("[INFO] Major Subsystem Version: %u\n", optional_header->variant.pe32_plus.MajorSubsystemVersion);
+            printf("[INFO] Minor Subsystem Version: %u\n", optional_header->variant.pe32_plus.MinorSubsystemVersion);
+            printf("[INFO] Win32 Version Value: 0x%X\n", optional_header->variant.pe32_plus.Win32VersionValue);
+            printf("[INFO] Size of Image: 0x%X\n", optional_header->variant.pe32_plus.SizeOfImage);
+            printf("[INFO] Size of Headers: 0x%X\n", optional_header->variant.pe32_plus.SizeOfHeaders);
+            printf("[INFO] CheckSum: 0x%X\n", optional_header->variant.pe32_plus.CheckSum);
+            printf("[INFO] Subsystem: 0x%X\n", optional_header->variant.pe32_plus.Subsystem);
+            printf("[INFO] Dll Characteristics: 0x%X\n", optional_header->variant.pe32_plus.DllCharacteristics);
+            printf("[INFO] Size of Stack Reserve: 0x%llX\n", (unsigned long long)optional_header->variant.pe32_plus.SizeOfStackReserve);
+            printf("[INFO] Size of Stack Commit: 0x%llX\n", (unsigned long long)optional_header->variant.pe32_plus.SizeOfStackCommit);
+            printf("[INFO] Size of Heap Reserve: 0x%llX\n", (unsigned long long)optional_header->variant.pe32_plus.SizeOfHeapReserve);
+            printf("[INFO] Size of Heap Commit: 0x%llX\n", (unsigned long long)optional_header->variant.pe32_plus.SizeOfHeapCommit);
+            printf("[INFO] Loader Flags: 0x%X\n", optional_header->variant.pe32_plus.LoaderFlags);
+            printf("[INFO] Number of RVA and Sizes: 0x%X\n", optional_header->variant.pe32_plus.NumberOfRvaAndSizes);
+            break;
+
+        default:
+            printf("[ERROR] Unknown optional header magic number: 0x%X\n", optional_header->magic_number);
+            break;
+    }
+}
+
+bool parse_section_header(File_Context* file_context) {
+    if (file_context == NULL) {
+        print_error("file_context is NULL! parse_section_header() failed!");
+        return false;
+    }
+
+    uint32_t section_header_byte_start = file_context->pe_signature_start_byte+PE_SIGNATURE_LENGTH+COFF_HEADER_BYTES;
+
+    if(file_context->optional_header->magic_number == PE32) {
+        section_header_byte_start += OPTIONAL_HEADER_PE32_SIZE;
+    }
+    else {
+        section_header_byte_start += OPTIONAL_HEADER_PE32_PLUS_SIZE;
+    }
+
+    if(fseek(file_context->file, section_header_byte_start, SEEK_SET) != 0) {
+        print_error("Failed to go to section header! parse_section_header() failed!");
+        return false;
+    }
+
+    Section_Header* section_header = (Section_Header*)malloc(sizeof(Section_Header));
+
+    if(section_header == NULL) {
+        print_error("Failed to go allocate memory to section header! parse_section_header() failed!");
+        return false;
+    }
+
+    if(fread(section_header, SECTION_HEADER_SIZE, 1, file_context->file) == 0) {
+        print_error("Failed to read section header! parse_section_header() failed!");
+        free(section_header);
+        return false;
+    }
+
+    file_context->section_header = section_header;
+
+    print_section_header(file_context->section_header);
+
+    return true;
+}
+
+void print_section_header(const Section_Header* section) {
+    
+    print_action("PARSING SECTION HEADER");
+
+    if (section == NULL) {
+        print_error("Section header is NULL!");
+        return;
+    }
+
+    char name[9] = {0}; 
+    memcpy(name, section->Name, 8);
+    name[8] = '\0'; 
+
+    printf("[INFO] Section Name: %s\n", name);
+    printf("[INFO] Virtual Size: 0x%X\n", section->VirtualSize);
+    printf("[INFO] Virtual Address: 0x%X\n", section->VirtualAddress);
+    printf("[INFO] Size of Raw Data: 0x%X\n", section->SizeOfRawData);
+    printf("[INFO] Pointer to Raw Data: 0x%X\n", section->PointerToRawData);
+    printf("[INFO] Pointer to Relocations: 0x%X\n", section->PointerToRelocations);
+    printf("[INFO] Pointer to Line Numbers: 0x%X\n", section->PointerToLinenumbers);
+    printf("[INFO] Number of Relocations: %u\n", section->NumberOfRelocations);
+    printf("[INFO] Number of Line Numbers: %u\n", section->NumberOfLinenumbers);
+    printf("[INFO] Characteristics: 0x%X\n", section->Characteristics);
+
+    print_action("PARSING SECTION HEADER");
 }

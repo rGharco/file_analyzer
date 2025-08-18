@@ -28,6 +28,7 @@ void find_patterns(const uint8_t* buffer, const Pattern* array, size_t bytes_rea
 int main(int argc, char* argv[]) {
 
 	if(argc < 2) {
+		print_banner();
 		print_usage(argv[0]);
     	exit(EXIT_FAILURE);
 	}
@@ -45,6 +46,7 @@ int main(int argc, char* argv[]) {
 	const Pattern pattern_array[] = { mal_1, mal_2 };
 
 	if (strcmp(argv[2], "-b") == 0) {
+		print_banner();
 		size_t bytes_read = fread(&file_context->buffer, sizeof(uint8_t), file_context->size, file_context->file);
 		
 		find_patterns(file_context->buffer, pattern_array, bytes_read);
@@ -58,6 +60,7 @@ int main(int argc, char* argv[]) {
 	Pattern pe_signature = create_pattern("PE file format signature", 4, pe_signature_bytes);
 
 	if(strcmp(argv[2], "-e") == 0) {
+		print_banner();
 		if(is_executable(file_context,&ms_dos,&pe_signature)) {
 			set_pe_flag(file_context);
 			
@@ -69,7 +72,9 @@ int main(int argc, char* argv[]) {
 				print_error("Failed to parse Optional header! parse_optional_header() failed!");
 			}
 
-			parse_section_header(file_context);
+			if(!parse_section_header(file_context)) {
+				print_error("Failed to parse Section header! parse_section_header failed!");
+			}
 
 			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
 		}

@@ -11,7 +11,6 @@ uint64_t get_file_size(const File_Context* file_context);
 uint64_t get_file_size_win(const char* path);
 
 void free_file_context(File_Context* file_context);
-void set_pe_flag(File_Context* file_context);
 
 File_Context* create_file_context(const char* path, const char* mode) {
     if (!path || !mode) {
@@ -87,11 +86,6 @@ File_Context* create_file_context(const char* path, const char* mode) {
         free_file_context(file_context);
         return NULL;
 }
-
-void set_pe_flag(File_Context* file_context) {
-    file_context->is_pe = true;
-}
-
 
 uint64_t get_file_size(const File_Context* file_context) {
     if (fseeko(file_context->file, 0, SEEK_END) != 0) {

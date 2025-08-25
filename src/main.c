@@ -60,7 +60,6 @@ int main(int argc, char* argv[]) {
 	if(strcmp(argv[2], "-e") == 0) {
 		print_banner();
 		if(is_executable(file_context,&ms_dos,&pe_signature)) {
-			set_pe_flag(file_context);
 			
 			if (!parse_coff_header(file_context)) {
 				print_error("Failed to parse COFF header! parse_coff_header() failed!");

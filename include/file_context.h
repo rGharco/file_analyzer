@@ -23,7 +23,6 @@ typedef struct {
 } File_Context;
 
 File_Context* create_file_context(const char* path, const char* mode);
-void set_pe_flag(File_Context* file_context);
 uint64_t get_file_size(const File_Context* file_context);
 uint64_t get_file_size_win(const char* path);
 void free_file_context(File_Context* file_context);

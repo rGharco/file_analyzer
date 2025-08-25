@@ -13,6 +13,10 @@
 #include <windows.h>
 #endif
 
+#define PRINT_STRING_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45s"RESET" ║\n", field, value)
+#define PRINT_HEXA_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", field, value);
+#define PRINT_NUMBER_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45d"RESET" ║\n", field, value);
+
 void print_banner() {
 
     #if _WIN32
@@ -105,15 +109,15 @@ void print_coff_header(const File_Context* file_context) {
     time_str[strcspn(time_str, "\n")] = '\0';
 
     printf("\t╔════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45s"RESET" ║\n", "Field", "Value");
+    PRINT_STRING_ROW("Field", "Value");
     printf("\t╠════════════════════════════════════════════════════════════════════════════════╣\n");
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45s"RESET" ║\n", "Machine Type", get_machine_type_name(file_context->coff_header->machine));
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45d"RESET" ║\n", "Number of Sections", file_context->coff_header->number_of_sections);
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45s"RESET" ║\n", "TimeDateStamp", time_str);
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", "PointerToSymbolTable", file_context->coff_header->pointer_to_symbol_table);
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", "NumberOfSymbols", file_context->coff_header->number_of_symbols);
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45d"RESET" ║\n", "SizeOfOptionalHeader (bytes)", file_context->coff_header->size_of_optional_header);
-    printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", "Characteristics", file_context->coff_header->characteristics);
+    PRINT_STRING_ROW("Machine Type", get_machine_type_name(file_context->coff_header->machine));
+    PRINT_NUMBER_ROW("NumberOfSections", file_context->coff_header->number_of_sections);
+    PRINT_STRING_ROW("TimeStamp", time_str);
+    PRINT_HEXA_ROW("PointerToSymbolTable", file_context->coff_header->pointer_to_symbol_table);
+    PRINT_HEXA_ROW("NumberOfSymbols", file_context->coff_header->number_of_symbols);
+    PRINT_NUMBER_ROW("SizeOfOptionalHeader (bytes)", file_context->coff_header->size_of_optional_header);
+    PRINT_HEXA_ROW("Characteristics", file_context->coff_header->characteristics);
     printf("\t╚════════════════════════════════════════════════════════════════════════════════╝\n");
 
     print_checkpoint("PARSED COFF HEADER!");
@@ -126,77 +130,77 @@ void print_optional_header_info(const Optional_Header* optional_header) {
     }
 
     printf("\t╔════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("\t║ %s%-30s%s │ %s%-45s%s ║\n", BOLD_RED, "Field", RESET, BOLD_CYAN, "Value", RESET);
+    PRINT_STRING_ROW("Field", "Value");
     printf("\t╠════════════════════════════════════════════════════════════════════════════════╣\n");
 
     if (optional_header->magic_number == PE32) {
-        #define PE32_PRINT(field, value) printf("\t║ %s%-30s%s │ %s%-45X%s ║\n", BOLD_RED, field, RESET, BOLD_CYAN, value, RESET)
-        #define PE32_PRINT_U(field, value) printf("\t║ %s%-30s%s │ %s%-45u%s ║\n", BOLD_RED, field, RESET, BOLD_CYAN, value, RESET)
+        PRINT_STRING_ROW("Header Type", "PE32");
 
-        printf("\t║ %s%-30s%s │ %s%-45%s ║\n", BOLD_RED, "Header Type", RESET, BOLD_CYAN, "PE32", RESET);
-        PE32_PRINT("Major Linker Version", optional_header->variant.pe32.MajorLinkerVersion);
-        PE32_PRINT("Minor Linker Version", optional_header->variant.pe32.MinorLinkerVersion);
-        PE32_PRINT("Size of Code", optional_header->variant.pe32.SizeOfCode);
-        PE32_PRINT("Size of Initialized Data", optional_header->variant.pe32.SizeOfInitializedData);
-        PE32_PRINT("Size of Uninitialized Data", optional_header->variant.pe32.SizeOfUninitializedData);
-        PE32_PRINT("Address of Entry Point", optional_header->variant.pe32.AddressOfEntryPoint);
-        PE32_PRINT("Base of Code", optional_header->variant.pe32.BaseOfCode);
-        PE32_PRINT("Base of Data", optional_header->variant.pe32.BaseOfData);
-        PE32_PRINT("Image Base", optional_header->variant.pe32.ImageBase);
-        PE32_PRINT("Section Alignment", optional_header->variant.pe32.SectionAlignment);
-        PE32_PRINT("File Alignment", optional_header->variant.pe32.FileAlignment);
-        PE32_PRINT_U("Major OS Version", optional_header->variant.pe32.MajorOperatingSystemVersion);
-        PE32_PRINT_U("Minor OS Version", optional_header->variant.pe32.MinorOperatingSystemVersion);
-        PE32_PRINT_U("Major Image Version", optional_header->variant.pe32.MajorImageVersion);
-        PE32_PRINT_U("Minor Image Version", optional_header->variant.pe32.MinorImageVersion);
-        PE32_PRINT_U("Major Subsystem Version", optional_header->variant.pe32.MajorSubsystemVersion);
-        PE32_PRINT_U("Minor Subsystem Version", optional_header->variant.pe32.MinorSubsystemVersion);
-        PE32_PRINT("Win32 Version Value", optional_header->variant.pe32.Win32VersionValue);
-        PE32_PRINT("Size of Image", optional_header->variant.pe32.SizeOfImage);
-        PE32_PRINT("Size of Headers", optional_header->variant.pe32.SizeOfHeaders);
-        PE32_PRINT("CheckSum", optional_header->variant.pe32.CheckSum);
-        PE32_PRINT("Subsystem", optional_header->variant.pe32.Subsystem);
-        PE32_PRINT("Dll Characteristics", optional_header->variant.pe32.DllCharacteristics);
-        PE32_PRINT("Size of Stack Reserve", optional_header->variant.pe32.SizeOfStackReserve);
-        PE32_PRINT("Size of Stack Commit", optional_header->variant.pe32.SizeOfStackCommit);
-        PE32_PRINT("Size of Heap Reserve", optional_header->variant.pe32.SizeOfHeapReserve);
-        PE32_PRINT("Size of Heap Commit", optional_header->variant.pe32.SizeOfHeapCommit);
-        PE32_PRINT("Loader Flags", optional_header->variant.pe32.LoaderFlags);
-        PE32_PRINT("Number of RVA and Sizes", optional_header->variant.pe32.NumberOfRvaAndSizes);
-    } 
+        PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32.MajorLinkerVersion);
+        PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32.MinorLinkerVersion);
+        PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32.SizeOfCode);
+        PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32.SizeOfInitializedData);
+        PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32.SizeOfUninitializedData);
+        PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32.AddressOfEntryPoint);
+        PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32.BaseOfCode);
+        PRINT_HEXA_ROW("Base of Data", optional_header->variant.pe32.BaseOfData);
+        PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32.ImageBase);
+        PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32.SectionAlignment);
+        PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32.FileAlignment);
+
+        PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32.MajorOperatingSystemVersion);
+        PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32.MinorOperatingSystemVersion);
+        PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32.MajorImageVersion);
+        PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32.MinorImageVersion);
+        PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32.MajorSubsystemVersion);
+        PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32.MinorSubsystemVersion);
+
+        PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32.Win32VersionValue);
+        PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32.SizeOfImage);
+        PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32.SizeOfHeaders);
+        PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32.CheckSum);
+        PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32.Subsystem);
+        PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32.DllCharacteristics);
+        PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32.SizeOfStackReserve);
+        PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32.SizeOfStackCommit);
+        PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32.SizeOfHeapReserve);
+        PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32.SizeOfHeapCommit);
+        PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32.LoaderFlags);
+        PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32.NumberOfRvaAndSizes);
+    }
     else if (optional_header->magic_number == PE32_PLUS) {
-        #define PE32_PLUS_PRINT(field, value) printf("\t║ %s%-30s%s │ %s%-45llX%s ║\n", BOLD_RED, field, RESET, BOLD_CYAN, (unsigned long long)value, RESET)
-        #define PE32_PLUS_PRINT_U(field, value) printf("\t║ %s%-30s%s │ %s%-45u%s ║\n", BOLD_RED, field, RESET, BOLD_CYAN, value, RESET)
+        PRINT_STRING_ROW("Header Type", "PE32+");
 
-        printf("\t║ %s%-30s%s │ %s%-45s%s ║\n", BOLD_RED, "Header Type", RESET, BOLD_CYAN, "PE32+", RESET);
-        PE32_PLUS_PRINT("Major Linker Version", optional_header->variant.pe32_plus.MajorLinkerVersion);
-        PE32_PLUS_PRINT("Minor Linker Version", optional_header->variant.pe32_plus.MinorLinkerVersion);
-        PE32_PLUS_PRINT("Size of Code", optional_header->variant.pe32_plus.SizeOfCode);
-        PE32_PLUS_PRINT("Size of Initialized Data", optional_header->variant.pe32_plus.SizeOfInitializedData);
-        PE32_PLUS_PRINT("Size of Uninitialized Data", optional_header->variant.pe32_plus.SizeOfUninitializedData);
-        PE32_PLUS_PRINT("Address of Entry Point", optional_header->variant.pe32_plus.AddressOfEntryPoint);
-        PE32_PLUS_PRINT("Base of Code", optional_header->variant.pe32_plus.BaseOfCode);
-        PE32_PLUS_PRINT("Image Base", optional_header->variant.pe32_plus.ImageBase);
-        PE32_PLUS_PRINT("Section Alignment", optional_header->variant.pe32_plus.SectionAlignment);
-        PE32_PLUS_PRINT("File Alignment", optional_header->variant.pe32_plus.FileAlignment);
-        PE32_PLUS_PRINT_U("Major OS Version", optional_header->variant.pe32_plus.MajorOperatingSystemVersion);
-        PE32_PLUS_PRINT_U("Minor OS Version", optional_header->variant.pe32_plus.MinorOperatingSystemVersion);
-        PE32_PLUS_PRINT_U("Major Image Version", optional_header->variant.pe32_plus.MajorImageVersion);
-        PE32_PLUS_PRINT_U("Minor Image Version", optional_header->variant.pe32_plus.MinorImageVersion);
-        PE32_PLUS_PRINT_U("Major Subsystem Version", optional_header->variant.pe32_plus.MajorSubsystemVersion);
-        PE32_PLUS_PRINT_U("Minor Subsystem Version", optional_header->variant.pe32_plus.MinorSubsystemVersion);
-        PE32_PLUS_PRINT("Win32 Version Value", optional_header->variant.pe32_plus.Win32VersionValue);
-        PE32_PLUS_PRINT("Size of Image", optional_header->variant.pe32_plus.SizeOfImage);
-        PE32_PLUS_PRINT("Size of Headers", optional_header->variant.pe32_plus.SizeOfHeaders);
-        PE32_PLUS_PRINT("CheckSum", optional_header->variant.pe32_plus.CheckSum);
-        PE32_PLUS_PRINT("Subsystem", optional_header->variant.pe32_plus.Subsystem);
-        PE32_PLUS_PRINT("Dll Characteristics", optional_header->variant.pe32_plus.DllCharacteristics);
-        PE32_PLUS_PRINT("Size of Stack Reserve", optional_header->variant.pe32_plus.SizeOfStackReserve);
-        PE32_PLUS_PRINT("Size of Stack Commit", optional_header->variant.pe32_plus.SizeOfStackCommit);
-        PE32_PLUS_PRINT("Size of Heap Reserve", optional_header->variant.pe32_plus.SizeOfHeapReserve);
-        PE32_PLUS_PRINT("Size of Heap Commit", optional_header->variant.pe32_plus.SizeOfHeapCommit);
-        PE32_PLUS_PRINT("Loader Flags", optional_header->variant.pe32_plus.LoaderFlags);
-        PE32_PLUS_PRINT("Number of RVA and Sizes", optional_header->variant.pe32_plus.NumberOfRvaAndSizes);
+        PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32_plus.MajorLinkerVersion);
+        PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32_plus.MinorLinkerVersion);
+        PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32_plus.SizeOfCode);
+        PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32_plus.SizeOfInitializedData);
+        PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32_plus.SizeOfUninitializedData);
+        PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32_plus.AddressOfEntryPoint);
+        PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32_plus.BaseOfCode);
+        PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32_plus.ImageBase);
+        PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32_plus.SectionAlignment);
+        PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32_plus.FileAlignment);
+
+        PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32_plus.MajorOperatingSystemVersion);
+        PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32_plus.MinorOperatingSystemVersion);
+        PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32_plus.MajorImageVersion);
+        PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32_plus.MinorImageVersion);
+        PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32_plus.MajorSubsystemVersion);
+        PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32_plus.MinorSubsystemVersion);
+
+        PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32_plus.Win32VersionValue);
+        PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32_plus.SizeOfImage);
+        PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32_plus.SizeOfHeaders);
+        PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32_plus.CheckSum);
+        PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32_plus.Subsystem);
+        PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32_plus.DllCharacteristics);
+        PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32_plus.SizeOfStackReserve);
+        PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32_plus.SizeOfStackCommit);
+        PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32_plus.SizeOfHeapReserve);
+        PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32_plus.SizeOfHeapCommit);
+        PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32_plus.LoaderFlags);
+        PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32_plus.NumberOfRvaAndSizes);
     }
 
     printf("\t╚════════════════════════════════════════════════════════════════════════════════╝\n");

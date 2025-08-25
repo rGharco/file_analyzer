@@ -100,6 +100,8 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 	print_success("Successfully read the PE signature!");
 	print_checkpoint("FILE IS EXECUTABLE!");
 
+    file_context->is_pe = true;
+
 	return true;
 }
 

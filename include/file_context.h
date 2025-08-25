@@ -19,7 +19,7 @@ typedef struct {
     bool is_pe;
     COFF_Header* coff_header;
     Optional_Header* optional_header;
-    Section_Header* section_header;
+    Section_Header* sections;
 } File_Context;
 
 File_Context* create_file_context(const char* path, const char* mode);

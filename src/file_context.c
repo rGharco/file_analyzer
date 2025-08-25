@@ -76,7 +76,7 @@ File_Context* create_file_context(const char* path, const char* mode) {
     file_context->pe_signature_start_byte = 0x0;
     file_context->coff_header = NULL;
     file_context->optional_header = NULL;
-    file_context->section_header = NULL;
+    file_context->sections = NULL;
 
     /******* Default initializers *************/
 
@@ -139,7 +139,9 @@ void free_file_context(File_Context* file_context) {
     if (file_context->path) free(file_context->path);
     if (file_context->mode) free(file_context->mode);
     if (file_context->buffer) free(file_context->buffer);
+    if (file_context->sections) free(file_context->sections);
     if (file_context->coff_header) free(file_context->coff_header);
     if (file_context->optional_header) free(file_context->optional_header);
+    
     free(file_context);
 }

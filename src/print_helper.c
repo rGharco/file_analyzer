@@ -17,6 +17,14 @@
 #define PRINT_HEXA_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", field, value);
 #define PRINT_NUMBER_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45d"RESET" ║\n", field, value);
 
+#define PRINT_SECTION(name,sec) printf("\t║"BOLD_CYAN" %-8s │ 0x%-014X │ 0x%-014X │ 0x%-014X │ 0x%-014X │ 0x%-08X "RESET"║\n", \
+               name, \
+               sec->VirtualAddress, \
+               sec->VirtualSize, \
+               sec->PointerToRawData, \
+               sec->SizeOfRawData, \
+               sec->Characteristics )
+
 void print_banner() {
 
     #if _WIN32
@@ -123,7 +131,7 @@ void print_coff_header(const File_Context* file_context) {
     print_checkpoint("PARSED COFF HEADER!");
 }
 
-void print_optional_header_info(const Optional_Header* optional_header) {
+void print_optional_header(const Optional_Header* optional_header) {
     if (optional_header == NULL) {
         print_error("Optional Header is NULL!\n");
         return;
@@ -205,5 +213,29 @@ void print_optional_header_info(const Optional_Header* optional_header) {
 
     printf("\t╚════════════════════════════════════════════════════════════════════════════════╝\n");
 }
+
+void print_section_headers(const File_Context* fc) {
+    if (!fc || !fc->sections || !fc->coff_header) return;
+
+    uint16_t n = fc->coff_header->number_of_sections;
+
+    printf("\n\t╔═══════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
+    printf("\t║ " BOLD_RED"%-8s │ %-16s │ %-16s │ %-16s │ %-16s │ %-10s"RESET" ║\n",
+           "Name", "Virtual Addr", "Virtual Size", "Raw Ptr", "Raw Size", "Flags");
+    printf("\t╠═══════════════════════════════════════════════════════════════════════════════════════════════════╣\n");
+
+    for (uint16_t i = 0; i < n; i++) {
+        const Section_Header* sec = &fc->sections[i];
+
+        char name[9];
+        memcpy(name, sec->Name, 8);
+        name[8] = '\0';
+
+        PRINT_SECTION(name,sec);
+    }
+
+    printf("\t╚═══════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
+}
+
 
 

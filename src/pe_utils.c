@@ -12,16 +12,12 @@ uint32_t get_pe_header_offset(File_Context* file_context);
 bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature);
 bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature);
 
-void print_coff_header(const File_Context* file_context);
-
 const char* get_machine_type_name(uint16_t machine_type);
 
 bool get_magic_number(File_Context* file_context);
 bool parse_optional_header(File_Context* file_context);
-void print_optional_header_info(const Optional_Header* optional_header);
 
 bool parse_section_header(File_Context* file_context);
-void print_section_header(const Section_Header* section);
 
 bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
     if (fread(file_context->buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
@@ -219,7 +215,7 @@ bool parse_optional_header(File_Context* file_context) {
     }
 
     print_success("Successfully parsed Optional header!");
-    print_optional_header_info(file_context->optional_header);
+    print_optional_header(file_context->optional_header);
 
     return true;
 
@@ -235,54 +231,22 @@ bool parse_section_header(File_Context* file_context) {
         return false;
     }
 
-    Section_Header* section_header = (Section_Header*)malloc(sizeof(Section_Header));
+    file_context->sections = (Section_Header*)malloc(file_context->coff_header->number_of_sections * sizeof(Section_Header));
 
-    if(section_header == NULL) {
+    if(file_context->sections == NULL) {
         print_error("Failed to go allocate memory to section header! parse_section_header() failed!");
         return false;
     }
 
-    Section_Header header_sections[file_context->coff_header->number_of_sections];
-
-    for(int i = 0; i < file_context->coff_header->number_of_sections; i++) {
-        if(fread(&header_sections[i], sizeof(Section_Header), 1, file_context->file) != 1) {
-            print_error("Failed to read section header! parse_section_header() failed!");
-            free(section_header);
-            return false;
-        }
-
-        print_section_header(&header_sections[i]);
+    uint16_t n = file_context->coff_header->number_of_sections;
+    if(fread(file_context->sections,sizeof(Section_Header),n,file_context->file) != n) {
+        print_error("Failed to read all section headers! parse_section_header() failed!");
+        free_file_context(file_context); 
+        return false;
     }
 
-    file_context->section_header = section_header;
-
-    print_section_header(file_context->section_header);
+    print_section_headers(file_context);
 
     return true;
 }
 
-void print_section_header(const Section_Header* section) {
-    
-    print_action("PARSING SECTION HEADER");
-
-    if (section == NULL) {
-        print_error("Section header is NULL!");
-        return;
-    }
-
-    char name[9] = {0}; 
-    memcpy(name, section->Name, 8);
-    name[8] = '\0'; 
-
-    printf("[INFO] Section Name: %s\n", name);
-    printf("[INFO] Virtual Size: 0x%X\n", section->VirtualSize);
-    printf("[INFO] Virtual Address: 0x%X\n", section->VirtualAddress);
-    printf("[INFO] Size of Raw Data: 0x%X\n", section->SizeOfRawData);
-    printf("[INFO] Pointer to Raw Data: 0x%X\n", section->PointerToRawData);
-    printf("[INFO] Pointer to Relocations: 0x%X\n", section->PointerToRelocations);
-    printf("[INFO] Pointer to Line Numbers: 0x%X\n", section->PointerToLinenumbers);
-    printf("[INFO] Number of Relocations: %u\n", section->NumberOfRelocations);
-    printf("[INFO] Number of Line Numbers: %u\n", section->NumberOfLinenumbers);
-    printf("[INFO] Characteristics: 0x%X\n", section->Characteristics);
-
-}

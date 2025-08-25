@@ -15,7 +15,5 @@ const char* get_machine_type_name(uint16_t machine_type);
 bool parse_optional_header(File_Context* file_context);
 
 bool parse_section_header(File_Context* file_context);
-void print_section_header(const Section_Header* section);
-
 
 #endif

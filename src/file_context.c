@@ -3,9 +3,12 @@
 #include "../include/print_helper.h"
 #include <malloc.h>
 #include <string.h>
+#include <windows.h>
+#include <fileapi.h>
 
 File_Context* create_file_context(const char* path, const char* mode);
-size_t get_file_size(const File_Context* file_context);
+uint64_t get_file_size(const File_Context* file_context);
+uint64_t get_file_size_win(const char* path);
 
 void free_file_context(File_Context* file_context);
 void set_pe_flag(File_Context* file_context);
@@ -17,6 +20,7 @@ File_Context* create_file_context(const char* path, const char* mode) {
     }
 
     FILE* file = fopen(path, mode);
+
     if(!file) {
         print_error("Failed to open file. create_file_context() failed!");
         return NULL;
@@ -33,7 +37,6 @@ File_Context* create_file_context(const char* path, const char* mode) {
     memset(file_context, 0, sizeof(File_Context));
 
     file_context->file = file;
-    
     file_context->path = strdup(path);
 
     if(file_context->path == NULL) {
@@ -48,9 +51,11 @@ File_Context* create_file_context(const char* path, const char* mode) {
         goto file_context_cleanup;
     }
 
+    #ifdef _WIN32
+    file_context->size = get_file_size_win(file_context->path);
+    #else
     file_context->size = get_file_size(file_context);
-
-    file_context->size = get_file_size(file_context);
+    #endif
 
     if(file_context->size == 0) {
         print_warning("File size is 0. Proceeding anyway.");
@@ -87,16 +92,50 @@ void set_pe_flag(File_Context* file_context) {
     file_context->is_pe = true;
 }
 
-size_t get_file_size(const File_Context* file_context) {
-    if(fseek(file_context->file, 0, SEEK_END) != 0) {
+
+uint64_t get_file_size(const File_Context* file_context) {
+    if (fseeko(file_context->file, 0, SEEK_END) != 0) {
         print_error("Failed to get file size!");
         return 0;
-    } 
+    }
 
-    size_t size = ftell(file_context->file);
-    fseek(file_context->file, 0, SEEK_SET);
+    off_t pos = ftello(file_context->file);
+    if (pos < 0) {
+        print_error("ftello failed!");
+        fseeko(file_context->file, 0, SEEK_SET);
+        return 0;
+    }
 
-    return size;
+    fseeko(file_context->file, 0, SEEK_SET);
+    return (uint64_t)pos;
+}
+
+uint64_t get_file_size_win(const char* path) {
+    HANDLE hFile = CreateFileA(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        print_error("Failed to open file! get_file_size_win failed!");
+        return 0;
+    }
+
+    LARGE_INTEGER liFileSize;
+
+    if (!GetFileSizeEx(hFile, &liFileSize)) {
+        print_error("Failed to get file size! get_file_size_win failed!");
+        CloseHandle(hFile);
+        return 0;
+    }
+
+    CloseHandle(hFile);
+    return (uint64_t)liFileSize.QuadPart;
 }
 
 void free_file_context(File_Context* file_context) {

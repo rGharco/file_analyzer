@@ -1,9 +1,3 @@
-//TODO: De facut cumva ca array-ul de sectiunii sa fie stocat in file context undeva, poate chiar de facut direct alocare 
-//pentru el (array-ul) si nu pentru un singur section header.
-//De facut o decizie daca folosesc goto cleanup pentru parse_Coff_header sau daca scot idea de goto si folosesc 
-//statementuri repetate. De vazut ce alte optimizari mai se pot face in cod.
-//De refacut cum arat mesajele de informare ca arata cam urat
-
 #include "../include/pe_utils.h"
 #include <string.h>
 #include <stdlib.h>

@@ -35,8 +35,6 @@ int main(int argc, char* argv[]) {
 
 	File_Context* file_context = create_file_context(argv[1], BINARY_READ);
 
-	size_t file_size = get_file_size(file_context);
-
 	uint8_t byte_array[2] = {0xE8, 0x00};
 	Pattern mal_1 = create_pattern("Malicious Pattern 1", 2, byte_array);
 
@@ -76,7 +74,7 @@ int main(int argc, char* argv[]) {
 				print_error("Failed to parse Section header! parse_section_header failed!");
 			}
 
-			printf("\nFILE SIZE: %lfMB", (double)file_size / 1000000);
+			printf("\nFILE SIZE: %.2lfMB", (double)file_context->size / 1048576);
 		}
 	}
 	

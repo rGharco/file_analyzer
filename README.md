@@ -3,5 +3,6 @@ C based program that performs file analysis for malicious patterns and flags pot
 
 # HOW TO COMPILE
 
-`
-gcc src/main.c src/pattern.c src/file_context.c src/pe_utils.c src/constants.c src/print_helper.c -Iinclude -o bin/main.exe`
+```bash
+gcc src/main.c src/pattern.c src/file_context.c src/pe_utils.c src/constants.c src/print_helper.c -Iinclude -o bin/main.exe
+``` 

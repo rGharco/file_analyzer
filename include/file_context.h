@@ -13,7 +13,6 @@ typedef struct {
     char* path;
     char* mode;
     uint64_t size;
-    uint8_t* buffer;
     bool has_ms_dos_signature;
     uint32_t pe_signature_start_byte;
     bool is_pe;
@@ -22,9 +21,18 @@ typedef struct {
     Section_Header* sections;
 } File_Context;
 
-File_Context* create_file_context(const char* path, const char* mode);
+typedef enum {
+    FILE_CONTEXT_SUCCESS,
+    FILE_CONTEXT_ERR_ALLOC, 
+    FILE_CONTEXT_ERR_FOPEN,
+    FILE_CONTEXT_ERR_FREAD,
+    FILE_CONTEXT_ERR_NO_PATH_OR_MODE,
+} Fc_Status;
+
+Fc_Status create_file_context(const char* path, const char* mode, File_Context** ctx);
 uint64_t get_file_size(const File_Context* file_context);
 uint64_t get_file_size_win(const char* path);
 void free_file_context(File_Context* file_context);
+const char* fc_status_str(Fc_Status status);
 
 #endif

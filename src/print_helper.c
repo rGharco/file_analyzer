@@ -2,6 +2,7 @@
 #define BOLD_RED "\e[1;31m"
 #define BOLD_GREEN   "\e[1;32m"
 #define BOLD_YELLOW  "\e[1;33m"
+#define YELLOW "\e[0;33m"
 #define BOLD_BLUE    "\e[1;34m"
 #define RESET   "\033[0m"
 #include "../include/print_helper.h"
@@ -88,7 +89,7 @@ void print_action(const char* message) {
 }
 
 void print_error(const char* message) {
-    fprintf(stderr, "[-] %s\n", message);
+    fprintf(stderr, ""BOLD_RED"[-] %s"RESET"\n", message);
     fflush(stderr); 
 }
 
@@ -101,7 +102,7 @@ void print_checkpoint(const char* message) {
 }
 
 void print_warning(const char* message) {
-	fprintf(stderr, "[!] Warning: %s\n", message);
+	fprintf(stderr, ""YELLOW"[!] Warning: %s"RESET"\n", message);
 	fflush(stderr); 
 }
 
@@ -141,76 +142,49 @@ void print_optional_header(const Optional_Header* optional_header) {
     PRINT_STRING_ROW("Field", "Value");
     printf("\t╠════════════════════════════════════════════════════════════════════════════════╣\n");
 
-    if (optional_header->magic_number == PE32) {
+    if(optional_header->magic_number == PE32) {
         PRINT_STRING_ROW("Header Type", "PE32");
-
-        PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32.MajorLinkerVersion);
-        PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32.MinorLinkerVersion);
-        PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32.SizeOfCode);
-        PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32.SizeOfInitializedData);
-        PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32.SizeOfUninitializedData);
-        PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32.AddressOfEntryPoint);
-        PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32.BaseOfCode);
-        PRINT_HEXA_ROW("Base of Data", optional_header->variant.pe32.BaseOfData);
-        PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32.ImageBase);
-        PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32.SectionAlignment);
-        PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32.FileAlignment);
-
-        PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32.MajorOperatingSystemVersion);
-        PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32.MinorOperatingSystemVersion);
-        PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32.MajorImageVersion);
-        PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32.MinorImageVersion);
-        PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32.MajorSubsystemVersion);
-        PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32.MinorSubsystemVersion);
-
-        PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32.Win32VersionValue);
-        PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32.SizeOfImage);
-        PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32.SizeOfHeaders);
-        PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32.CheckSum);
-        PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32.Subsystem);
-        PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32.DllCharacteristics);
-        PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32.SizeOfStackReserve);
-        PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32.SizeOfStackCommit);
-        PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32.SizeOfHeapReserve);
-        PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32.SizeOfHeapCommit);
-        PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32.LoaderFlags);
-        PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32.NumberOfRvaAndSizes);
     }
-    else if (optional_header->magic_number == PE32_PLUS) {
+    else {
         PRINT_STRING_ROW("Header Type", "PE32+");
-
-        PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32_plus.MajorLinkerVersion);
-        PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32_plus.MinorLinkerVersion);
-        PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32_plus.SizeOfCode);
-        PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32_plus.SizeOfInitializedData);
-        PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32_plus.SizeOfUninitializedData);
-        PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32_plus.AddressOfEntryPoint);
-        PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32_plus.BaseOfCode);
-        PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32_plus.ImageBase);
-        PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32_plus.SectionAlignment);
-        PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32_plus.FileAlignment);
-
-        PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32_plus.MajorOperatingSystemVersion);
-        PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32_plus.MinorOperatingSystemVersion);
-        PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32_plus.MajorImageVersion);
-        PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32_plus.MinorImageVersion);
-        PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32_plus.MajorSubsystemVersion);
-        PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32_plus.MinorSubsystemVersion);
-
-        PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32_plus.Win32VersionValue);
-        PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32_plus.SizeOfImage);
-        PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32_plus.SizeOfHeaders);
-        PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32_plus.CheckSum);
-        PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32_plus.Subsystem);
-        PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32_plus.DllCharacteristics);
-        PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32_plus.SizeOfStackReserve);
-        PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32_plus.SizeOfStackCommit);
-        PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32_plus.SizeOfHeapReserve);
-        PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32_plus.SizeOfHeapCommit);
-        PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32_plus.LoaderFlags);
-        PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32_plus.NumberOfRvaAndSizes);
     }
 
+    PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32.MajorLinkerVersion);
+    PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32.MinorLinkerVersion);
+    PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32.SizeOfCode);
+    PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32.SizeOfInitializedData);
+    PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32.SizeOfUninitializedData);
+    PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32.AddressOfEntryPoint);
+    PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32.BaseOfCode);
+
+    if(optional_header->magic_number == PE32) {
+        PRINT_HEXA_ROW("Base of Data", optional_header->variant.pe32.BaseOfData);
+    }
+
+    PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32.ImageBase);
+    PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32.SectionAlignment);
+    PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32.FileAlignment);
+
+    PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32.MajorOperatingSystemVersion);
+    PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32.MinorOperatingSystemVersion);
+    PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32.MajorImageVersion);
+    PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32.MinorImageVersion);
+    PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32.MajorSubsystemVersion);
+    PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32.MinorSubsystemVersion);
+
+    PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32.Win32VersionValue);
+    PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32.SizeOfImage);
+    PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32.SizeOfHeaders);
+    PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32.CheckSum);
+    PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32.Subsystem);
+    PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32.DllCharacteristics);
+    PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32.SizeOfStackReserve);
+    PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32.SizeOfStackCommit);
+    PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32.SizeOfHeapReserve);
+    PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32.SizeOfHeapCommit);
+    PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32.LoaderFlags);
+    PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32.NumberOfRvaAndSizes);
+    
     printf("\t╚════════════════════════════════════════════════════════════════════════════════╝\n");
 }
 
@@ -234,7 +208,7 @@ void print_section_headers(const File_Context* fc) {
         PRINT_SECTION(name,sec);
     }
 
-    printf("\t╚═══════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
+    printf("\t╚═══════════════════════════════════════════════════════════════════════════════════════════════════╝\n\n");
 }
 
 

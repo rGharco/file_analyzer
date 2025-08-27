@@ -6,91 +6,97 @@
 #include "../include/print_helper.h"
 
 #define MAGIC_NUMBER_SIZE 2 
+#define MS_DOS_BUFFER 2
 
-bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos);
-uint32_t get_pe_header_offset(File_Context* file_context);
-bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature);
-bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature);
+/****************************** FUNCTION PROTOTYPES *******************************/
 
+Pe_Parse_Status matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos);
+Pe_Parse_Status set_pe_header_offset(File_Context* file_context);
+Pe_Parse_Status has_pe_signature(File_Context* file_context, const Pattern* pe_signature);
+Pe_Parse_Status is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature);
+
+Pe_Parse_Status parse_coff_header(File_Context* file_context);
 const char* get_machine_type_name(uint16_t machine_type);
 
-bool get_magic_number(File_Context* file_context);
-bool parse_optional_header(File_Context* file_context);
+Pe_Parse_Status get_magic_number(File_Context* file_context, Optional_Header* optional_header);
+Pe_Parse_Status parse_optional_header(File_Context* file_context);
+Pe_Parse_Status parse_section_header(File_Context* file_context);
 
-bool parse_section_header(File_Context* file_context);
+/****************************** FUNCTION PROTOTYPES *******************************/
 
-bool matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
-    if (fread(file_context->buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
+Pe_Parse_Status matches_ms_dos_signature(File_Context* file_context, const Pattern* ms_dos) {
+    uint8_t buffer[MS_DOS_BUFFER];
+
+    if (fread(buffer, sizeof(uint8_t), ms_dos->number_of_bytes, file_context->file) != ms_dos->number_of_bytes) {
         print_error("Could not read the bytes necessary to match MS-DOS signature!");
-        return false;
+        return PE_PARSE_ERR_FREAD;
     }
 
     print_success("Successfully read bytes to check MS-DOS stub");
 
-    if (memcmp(file_context->buffer, ms_dos->bytes, ms_dos->number_of_bytes) != 0) {
+    if (memcmp(buffer, ms_dos->bytes, ms_dos->number_of_bytes) != 0) {
         print_error("Could not match the MS-DOS signature!");
-        return false;
+        return PE_PARSE_ERR_MS_DOS_SIG;
     }
 
     print_success("Successfully identified the MS-DOS stub");
 	file_context->has_ms_dos_signature = true;
-    return true;
+
+    return PE_PARSE_SUCCESS;
 }
 
-uint32_t get_pe_header_offset(File_Context* file_context) {
-	uint32_t pe_signature_start_byte;
-
+Pe_Parse_Status set_pe_header_offset(File_Context* file_context) {
 	if(fseek(file_context->file, PE_HEADER_OFFSET,SEEK_SET) != 0) {
 		print_error("Could not go to PE header offset!");
-		return UINT32_MAX;
+		return PE_PARSE_ERR_FSEEK;
 	}
 
-	if (fread(&pe_signature_start_byte, sizeof(uint32_t), 1, file_context->file) != 1) {
+	if (fread(&file_context->pe_signature_start_byte, sizeof(uint32_t), 1, file_context->file) != 1) {
 		print_error("Could not read PE header byte at offset!");
-		return UINT32_MAX;
+		return PE_PARSE_ERR_FREAD;
 	}
 
-	file_context->pe_signature_start_byte = pe_signature_start_byte;
-
-	return pe_signature_start_byte;
+	return PE_PARSE_SUCCESS;
 }
 
-bool has_pe_signature(File_Context* file_context, const Pattern* pe_signature) {
+Pe_Parse_Status has_pe_signature(File_Context* file_context, const Pattern* pe_signature) {
 	uint8_t pe_signature_bytes_read[PE_SIGNATURE_LENGTH];
 
 	if(fseek(file_context->file,file_context->pe_signature_start_byte,SEEK_SET) != 0 ) {
 		print_error("Could not go to offset indicated by PE header byte!");
-		return false;
+		return PE_PARSE_ERR_FSEEK;
 	}
 
 	print_success("Successfully found the PE signature offset!");
 
 	if (fread(pe_signature_bytes_read, sizeof(uint8_t), PE_SIGNATURE_LENGTH, file_context->file) != pe_signature->number_of_bytes) {
 		print_error("Could not read number of bytes at PE signature offset!");
-		return false;
+		return PE_PARSE_ERR_FREAD;
 	}
 
-	return memcmp(pe_signature_bytes_read, pe_signature->bytes, pe_signature->number_of_bytes) == 0;
+	if(memcmp(pe_signature_bytes_read, pe_signature->bytes, pe_signature->number_of_bytes) != 0){
+        return PE_PARSE_ERR_PE_SIG;
+    }
+
+    return PE_PARSE_SUCCESS;
 }
 
-bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature) {
+Pe_Parse_Status is_executable(File_Context* file_context, const Pattern* ms_dos, const Pattern* pe_signature) {
 	print_action("CHECKING IF FILE IS EXECUTABLE");
 
-	if(!matches_ms_dos_signature(file_context,ms_dos)) {
-		print_error("Abort: Failed to match MS_DOS stub!");
-		return false;
+	if(matches_ms_dos_signature(file_context,ms_dos) != PE_PARSE_SUCCESS) {
+		print_error("Failed to match MS_DOS stub!");
+		return PE_PARSE_ERR_MS_DOS_SIG;
 	}
 
-	uint32_t pe_signature_start_byte = get_pe_header_offset(file_context);
-
-	if(pe_signature_start_byte == UINT32_MAX) {
-		print_error("Abort: Failed to get PE header offset!");
-        return false;
+	if(set_pe_header_offset(file_context) != PE_PARSE_SUCCESS) {
+		print_error("Failed to get PE header offset!");
+        return PE_PARSE_ERR_PE_HEADER_OFFSET;
 	}
 
-	if(!has_pe_signature(file_context, pe_signature)) {
-		print_error("Abort: Failed to get PE signature!");
-		return false;
+	if(has_pe_signature(file_context, pe_signature) != PE_PARSE_SUCCESS) {
+		print_error("Failed to get PE signature!");
+		return PE_PARSE_ERR_PE_SIG;
 	}
 
 	print_success("Successfully read the PE signature!");
@@ -98,28 +104,23 @@ bool is_executable(File_Context* file_context, const Pattern* ms_dos, const Patt
 
     file_context->is_pe = true;
 
-	return true;
+	return PE_PARSE_SUCCESS;
 }
 
-bool parse_coff_header(File_Context* file_context) {
+Pe_Parse_Status parse_coff_header(File_Context* file_context) {
     print_action("PARSING COFF HEADER");
-
-    if (file_context == NULL) {
-        print_error("Failed to parse COFF header! file_context is NULL!");
-        return false;
-    }
 
     COFF_Header* coff_header = (COFF_Header*)malloc(sizeof(COFF_Header));
 
     if (coff_header == NULL) {
         print_error("Failed to allocate memory for COFF header! parse_coff_header() failed!");
-        return false;
+        return PE_PARSE_ERR_COFF_HEADER;
     }
 
     if (fread(coff_header, sizeof(COFF_Header), 1, file_context->file) != 1) {
         print_error("Could not read bytes for COFF header! fread() failed!");
         free(coff_header);
-        return false;
+        return PE_PARSE_ERR_FREAD;
     }
 
     file_context->coff_header = coff_header;
@@ -128,7 +129,7 @@ bool parse_coff_header(File_Context* file_context) {
 
     print_coff_header(file_context);
 
-    return true;
+    return PE_PARSE_SUCCESS;
 }
 
 const char* get_machine_type_name(uint16_t machine_type) {
@@ -171,82 +172,90 @@ const char* get_machine_type_name(uint16_t machine_type) {
     }
 }
 
-bool get_magic_number(File_Context* file_context) {
-    if (file_context == NULL) {
-        print_error("file_context is NULL! get_magic_number() failed!");
-        return false;
-    }
-
-    if(fread(&file_context->optional_header->magic_number, MAGIC_NUMBER_SIZE,1, file_context->file) != 1) {
+Pe_Parse_Status get_magic_number(File_Context* file_context, Optional_Header* optional_header) {
+    if(fread(&optional_header->magic_number, MAGIC_NUMBER_SIZE,1, file_context->file) != 1) {
         print_error("Failed to read Magic Number from optional header! get_magic_number() failed!");
-        return false;
+        return PE_PARSE_ERR_FREAD;
     }
 
-    return true;
+    return PE_PARSE_SUCCESS;
 }
 
-bool parse_optional_header(File_Context* file_context) {
+Pe_Parse_Status parse_optional_header(File_Context* file_context) {
     print_action("PARSING OPTIONAL HEADER");
-
-    if (file_context == NULL) {
-        print_error("file_context is NULL! parse_optional_header() failed!");
-        return false;
-    }
 
     Optional_Header* optional_header = (Optional_Header*)malloc(sizeof(Optional_Header));
 
     if (optional_header == NULL) {
         print_error("Memory allocation failed! parse_optional_header() failed!");
-        return false;
+        return PE_PARSE_ERR_OPTIONAL_HEADER;
+    }
+
+    if (get_magic_number(file_context, optional_header) != PE_PARSE_SUCCESS) {
+        print_error("Failed to read magic number!");
+        goto optional_header_cleanup;
+    }
+
+    print_success("Successfully read magic number bytes!");
+
+    uint32_t optional_header_size = file_context->coff_header->size_of_optional_header-MAGIC_NUMBER_SIZE;
+
+    if (optional_header->magic_number == PE32) {
+        if (fread(&optional_header->variant.pe32, optional_header_size, 1, file_context->file) != 1) {
+            print_error("Failed to read PE32 optional header!");
+            goto optional_header_cleanup;
+        }
+        print_success("Successfully identified PE32 format!");
+    } 
+    else if (optional_header->magic_number == PE32_PLUS) {
+        if (fread(&optional_header->variant.pe32_plus, optional_header_size, 1, file_context->file) != 1) {
+            print_error("Failed to read PE32+ optional header!");
+            goto optional_header_cleanup;
+        }
+        print_success("Successfully identified PE32+ format!");
+    } 
+    else {
+        print_error("Unknown optional header format!");
+        goto optional_header_cleanup;
     }
 
     file_context->optional_header = optional_header;
 
-    if (!get_magic_number(file_context)) {
-        print_error("Failed to read magic number!");
-        goto cleanup;
-    }
-
-    uint32_t OPTIONAL_HEADER_SIZE = file_context->coff_header->size_of_optional_header-MAGIC_NUMBER_SIZE;
-
-    if(fread(&file_context->optional_header->variant.pe32, OPTIONAL_HEADER_SIZE , 1,file_context->file) != 1) {
-        print_error("Failed to read bytes for Optional header! parse_optional_header() failed!");
-        goto cleanup;
-    }
-
-    print_success("Successfully parsed Optional header!");
     print_optional_header(file_context->optional_header);
+    print_success("Successfully parsed Optional header!");
+    print_checkpoint("PARSE OPTIONAL HEADER");
 
-    return true;
+    return PE_PARSE_SUCCESS;
 
-cleanup:
+optional_header_cleanup:
     free(optional_header);
-    file_context->optional_header = NULL;
-    return false;
+    return PE_PARSE_ERR_OPTIONAL_HEADER;
 }
 
-bool parse_section_header(File_Context* file_context) {
-    if (file_context == NULL) {
-        print_error("file_context is NULL! parse_section_header() failed!");
-        return false;
-    }
+Pe_Parse_Status parse_section_header(File_Context* file_context) {
+    print_action("PARSING SECTION HEADER");
 
-    file_context->sections = (Section_Header*)malloc(file_context->coff_header->number_of_sections * sizeof(Section_Header));
+    Section_Header* sections = (Section_Header*)malloc(file_context->coff_header->number_of_sections * sizeof(Section_Header));
 
-    if(file_context->sections == NULL) {
-        print_error("Failed to go allocate memory to section header! parse_section_header() failed!");
-        return false;
+    if(sections == NULL) {
+        print_error("Failed to allocate memory for section headers! parse_section_header() failed!");
+        return PE_PARSE_ERR_SECTION_HEADER;
     }
 
     uint16_t n = file_context->coff_header->number_of_sections;
-    if(fread(file_context->sections,sizeof(Section_Header),n,file_context->file) != n) {
+
+    if(fread(sections,sizeof(Section_Header),n,file_context->file) != n) {
         print_error("Failed to read all section headers! parse_section_header() failed!");
-        free_file_context(file_context); 
-        return false;
+        free(sections);
+        return PE_PARSE_ERR_FREAD;
     }
 
-    print_section_headers(file_context);
+    file_context->sections = sections;
 
-    return true;
+    print_section_headers(file_context);
+    print_success("Successfully parsed section header!");
+    print_checkpoint("PARSED SECTION HEADER");
+
+    return PE_PARSE_SUCCESS;
 }
 

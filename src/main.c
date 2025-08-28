@@ -6,6 +6,7 @@
 #include "../include/constants.h"
 #include "../include/print_helper.h"
 #include <time.h>
+#include "../include/entropy.h"
 
 #define BINARY_READ "rb"
 #define BINARY_WRITE "wb"
@@ -45,7 +46,12 @@ int main(int argc, char* argv[]) {
 			parse_optional_header(file_context);
 			parse_section_header(file_context);
 
-			printf("\nFILE SIZE: %.2lfMB", (double)file_context->size / 1048576);
+			printf("\nFILE SIZE: %.2lfMB\n", (double)file_context->size / 1048576);
+			
+			uint64_t* byte_count = extract_file_byte_count(file_context->file);
+
+			printf("Entropy: %lf", entropy(byte_count, file_context->size));
+			free(byte_count);
 		}
 	}
 	

@@ -6,13 +6,13 @@
 #include <windows.h>
 #include <fileapi.h>
 
-Fc_Status create_file_context(const char* path, const char* mode, File_Context** ctx);
+Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context);
 uint64_t get_file_size(const File_Context* file_context);
 uint64_t get_file_size_win(const char* path);
 
 void free_file_context(File_Context* file_context);
 
-Fc_Status create_file_context(const char* path, const char* mode, File_Context** ctx)
+Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context)
 {
     if (!path || !mode) {
         print_error("Path or mode not specified. create_file_context() failed!");
@@ -26,55 +26,55 @@ Fc_Status create_file_context(const char* path, const char* mode, File_Context**
         return FILE_CONTEXT_ERR_FOPEN;
     }
 
-    *ctx = (File_Context*)malloc(sizeof(File_Context));
+    *file_context = (File_Context*)malloc(sizeof(File_Context));
 
-    if (*ctx == NULL) {
+    if (*file_context == NULL) {
         print_error("Failed to allocate memory to file context! create_file_context() failed!");
         fclose(file);
         return FILE_CONTEXT_ERR_ALLOC;
     }
 
-    memset(*ctx, 0, sizeof(File_Context));
+    memset(*file_context, 0, sizeof(File_Context));
 
-    (*ctx)->file = file;
-    (*ctx)->path = strdup(path);
+    (*file_context)->file = file;
+    (*file_context)->path = strdup(path);
 
-    if (!(*ctx)->path) {
+    if (!(*file_context)->path) {
         print_error("Failed to allocate memory to file_context path! create_file_context() failed!");
         goto file_context_cleanup;
     }
 
-    (*ctx)->mode = strdup(mode);
+    (*file_context)->mode = strdup(mode);
     
-    if (!(*ctx)->mode) {
+    if (!(*file_context)->mode) {
         print_error("Failed to allocate memory to file_context mode! create_file_context() failed!");
         goto file_context_cleanup;
     }
 
     #ifdef _WIN32
-        (*ctx)->size = get_file_size_win((*ctx)->path);
+        (*file_context)->size = get_file_size_win((*file_context)->path);
     #else
-        (*ctx)->size = get_file_size(*ctx);
+        (*file_context)->size = get_file_size(*file_context);
     #endif
 
-    if ((*ctx)->size == 0) {
+    if ((*file_context)->size == 0) {
         print_warning("File size is 0. Proceeding anyway.");
         return FILE_CONTEXT_SUCCESS;
     }
 
     // Default initializers
-    (*ctx)->is_pe = false;
-    (*ctx)->has_ms_dos_signature = false;
-    (*ctx)->pe_signature_start_byte = 0x0;
-    (*ctx)->coff_header = NULL;
-    (*ctx)->optional_header = NULL;
-    (*ctx)->sections = NULL;
+    (*file_context)->is_pe = false;
+    (*file_context)->has_ms_dos_signature = false;
+    (*file_context)->pe_signature_start_byte = 0x0;
+    (*file_context)->coff_header = NULL;
+    (*file_context)->optional_header = NULL;
+    (*file_context)->sections = NULL;
 
     return FILE_CONTEXT_SUCCESS;
 
 file_context_cleanup:
-    free_file_context(*ctx);
-    *ctx = NULL;
+    free_file_context(*file_context);
+    *file_context = NULL;
     return FILE_CONTEXT_ERR_ALLOC;
 }
 

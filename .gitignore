@@ -66,3 +66,7 @@ dkms.conf
 bin.dat
 .bin/
 ./bin/*.exe
+/CMakeFiles
+/CMakeCache.txt
+Makefile
+cmake_install.cmake

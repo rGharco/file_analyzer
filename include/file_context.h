@@ -30,8 +30,8 @@ typedef enum {
 } Fc_Status;
 
 Fc_Status create_file_context(const char* path, const char* mode, File_Context** ctx);
-uint64_t get_file_size(const File_Context* file_context);
-uint64_t get_file_size_win(const char* path);
+static uint64_t get_file_size(const File_Context* file_context);
+static uint64_t get_file_size_win(const char* path);
 void free_file_context(File_Context* file_context);
 const char* fc_status_str(Fc_Status status);
 

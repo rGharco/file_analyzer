@@ -1,4 +1,4 @@
-#include "entropy.h"
+#include "../include/entropy.h"
 #define BYTE_OUTCOMES 256
 #define BUFFER_SIZE 1024
 

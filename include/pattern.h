@@ -2,6 +2,7 @@
 #define PATTERN_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct {
 	const char* pattern_name;

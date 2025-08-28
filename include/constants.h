@@ -6,6 +6,7 @@
 #endif
 
 #include <stdint.h>  
+#include <stddef.h>
 
 extern const size_t PE_HEADER_OFFSET;
 extern const uint8_t PE_SIGNATURE_LENGTH;

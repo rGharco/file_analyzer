@@ -3,12 +3,15 @@
 #include "../include/print_helper.h"
 #include <malloc.h>
 #include <string.h>
-#include <windows.h>
-#include <fileapi.h>
+
+#ifdef _WIN32
+	#include <windows.h>
+	#include <fileapi.h>
+#endif
 
 Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context);
-uint64_t get_file_size(const File_Context* file_context);
-uint64_t get_file_size_win(const char* path);
+static uint64_t get_file_size(const File_Context* file_context);
+static uint64_t get_file_size_win(const char* path);
 
 void free_file_context(File_Context* file_context);
 
@@ -78,7 +81,7 @@ file_context_cleanup:
     return FILE_CONTEXT_ERR_ALLOC;
 }
 
-uint64_t get_file_size(const File_Context* file_context) {
+static uint64_t get_file_size(const File_Context* file_context) {
     if (fseeko(file_context->file, 0, SEEK_END) != 0) {
         print_error("Failed to get file size!");
         return 0;
@@ -95,7 +98,8 @@ uint64_t get_file_size(const File_Context* file_context) {
     return (uint64_t)pos;
 }
 
-uint64_t get_file_size_win(const char* path) {
+#ifdef _WIN32
+static uint64_t get_file_size_win(const char* path) {
     HANDLE hFile = CreateFileA(
         path,
         GENERIC_READ,
@@ -122,6 +126,7 @@ uint64_t get_file_size_win(const char* path) {
     CloseHandle(hFile);
     return (uint64_t)liFileSize.QuadPart;
 }
+#endif
 
 void free_file_context(File_Context* file_context) {
     if (file_context == NULL) return;

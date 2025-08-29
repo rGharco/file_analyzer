@@ -221,7 +221,7 @@ Pe_Parse_Status parse_optional_header(File_Context* file_context) {
 
     file_context->optional_header = optional_header;
 
-    print_optional_header(file_context->optional_header);
+    print_optional_header(file_context);
     print_success("Successfully parsed Optional header!");
     print_checkpoint("PARSE OPTIONAL HEADER");
 

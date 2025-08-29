@@ -9,11 +9,31 @@
 	#include <fileapi.h>
 #endif
 
-Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context);
-static uint64_t get_file_size(const File_Context* file_context);
-static uint64_t get_file_size_win(const char* path);
+/******************************
+ * Public API prototypes
+ ******************************/
 
+Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context);
 void free_file_context(File_Context* file_context);
+
+/******************************
+ * Private helper prototypes
+ ******************************/
+
+ #ifndef _WIN32
+/** @brief Returns the size of a file using standard C functions (POSIX). */
+static uint64_t get_file_size(const File_Context* file_context);
+#endif
+
+#ifdef _WIN32
+/** @brief Returns the size of a file using Windows API. */
+static uint64_t get_file_size_win(const char* path);
+#endif
+
+
+/******************************
+ * Public API implementations
+ ******************************/
 
 Fc_Status create_file_context(const char* path, const char* mode, File_Context** file_context)
 {
@@ -47,9 +67,9 @@ Fc_Status create_file_context(const char* path, const char* mode, File_Context**
         goto file_context_cleanup;
     }
 
-    (*file_context)->mode = strdup(mode);
+    (*file_context)->_mode = strdup(mode);
     
-    if (!(*file_context)->mode) {
+    if (!(*file_context)->_mode) {
         print_error("Failed to allocate memory to file_context mode! create_file_context() failed!");
         goto file_context_cleanup;
     }
@@ -81,6 +101,36 @@ file_context_cleanup:
     return FILE_CONTEXT_ERR_ALLOC;
 }
 
+void free_file_context(File_Context* file_context) {
+    if (file_context == NULL) return;
+
+    if (file_context->file) fclose(file_context->file);
+    if (file_context->path) free(file_context->path);
+    if (file_context->_mode) free(file_context->_mode);
+    if (file_context->coff_header) free(file_context->coff_header);
+    if (file_context->optional_header) free(file_context->optional_header);
+    if (file_context->sections) free(file_context->sections);
+    
+    free(file_context);
+}
+
+const char* fc_status_str(Fc_Status status) {
+    switch(status) {
+        case FILE_CONTEXT_SUCCESS: return "FILE_CONTEXT_SUCCESS";
+        case FILE_CONTEXT_ERR_ALLOC: return "FILE_CONTEXT_ERR_ALLOC";
+        case FILE_CONTEXT_ERR_FOPEN: return "FILE_CONTEXT_ERR_FOPEN";
+        case FILE_CONTEXT_ERR_FREAD: return "FILE_CONTEXT_ERR_FREAD";
+        case FILE_CONTEXT_ERR_NO_PATH_OR_MODE: return "FILE_CONTEXT_ERR_NO_PATH_OR_MODE";
+    }
+
+    return NULL;
+}
+
+/******************************
+ * Private helper implementations
+ ******************************/
+
+#ifndef _WIN32
 static uint64_t get_file_size(const File_Context* file_context) {
     if (fseeko(file_context->file, 0, SEEK_END) != 0) {
         print_error("Failed to get file size!");
@@ -97,56 +147,35 @@ static uint64_t get_file_size(const File_Context* file_context) {
     fseeko(file_context->file, 0, SEEK_SET);
     return (uint64_t)pos;
 }
-
-#ifdef _WIN32
-static uint64_t get_file_size_win(const char* path) {
-    HANDLE hFile = CreateFileA(
-        path,
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        print_error("Failed to open file! get_file_size_win failed!");
-        return 0;
-    }
-
-    LARGE_INTEGER liFileSize;
-
-    if (!GetFileSizeEx(hFile, &liFileSize)) {
-        print_error("Failed to get file size! get_file_size_win failed!");
-        CloseHandle(hFile);
-        return 0;
-    }
-
-    CloseHandle(hFile);
-    return (uint64_t)liFileSize.QuadPart;
-}
 #endif
 
-void free_file_context(File_Context* file_context) {
-    if (file_context == NULL) return;
+#ifdef _WIN32
+    static uint64_t get_file_size_win(const char* path) {
+        HANDLE hFile = CreateFileA(
+            path,
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
 
-    if (file_context->file) fclose(file_context->file);
-    if (file_context->path) free(file_context->path);
-    if (file_context->mode) free(file_context->mode);
-    if (file_context->coff_header) free(file_context->coff_header);
-    if (file_context->optional_header) free(file_context->optional_header);
-    if (file_context->sections) free(file_context->sections);
-    
-    free(file_context);
-}
+        if (hFile == INVALID_HANDLE_VALUE) {
+            print_error("Failed to open file! get_file_size_win failed!");
+            return 0;
+        }
 
-const char* fc_status_str(Fc_Status status) {
-    switch(status) {
-        case FILE_CONTEXT_SUCCESS: return "FILE_CONTEXT_SUCCESS";
-        case FILE_CONTEXT_ERR_ALLOC: return "FILE_CONTEXT_ERR_ALLOC";
-        case FILE_CONTEXT_ERR_FOPEN: return "FILE_CONTEXT_ERR_FOPEN";
-        case FILE_CONTEXT_ERR_FREAD: return "FILE_CONTEXT_ERR_FREAD";
-        case FILE_CONTEXT_ERR_NO_PATH_OR_MODE: return "FILE_CONTEXT_ERR_NO_PATH_OR_MODE";
+        LARGE_INTEGER liFileSize;
+
+        if (!GetFileSizeEx(hFile, &liFileSize)) {
+            print_error("Failed to get file size! get_file_size_win failed!");
+            CloseHandle(hFile);
+            return 0;
+        }
+
+        CloseHandle(hFile);
+        return (uint64_t)liFileSize.QuadPart;
     }
-}
+#endif
+

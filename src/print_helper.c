@@ -18,13 +18,28 @@
 #define PRINT_HEXA_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", field, value);
 #define PRINT_NUMBER_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45d"RESET" ║\n", field, value);
 
-#define PRINT_SECTION(name,sec) printf("\t║"BOLD_CYAN" %-8s │ 0x%-014X │ 0x%-014X │ 0x%-014X │ 0x%-014X │ 0x%-08X "RESET"║\n", \
+#define PRINT_SECTION(name,sec) printf("\t║"BOLD_CYAN" %-8s │ 0x%-14X │ 0x%-14X │ 0x%-14X │ 0x%-14X │ 0x%-8X "RESET"║\n", \
                name, \
                sec->VirtualAddress, \
                sec->VirtualSize, \
                sec->PointerToRawData, \
                sec->SizeOfRawData, \
                sec->Characteristics )
+
+/****************************** FUNCTION PROTOTYPES *******************************/
+
+void print_banner();
+void print_usage(const char* main_exe);
+void print_action(const char* message);
+void print_error(const char* message);
+void print_success(const char* message);
+void print_checkpoint(const char* message);
+void print_warning(const char* message);
+void print_coff_header(const File_Context* file_context);
+void print_optional_header(const File_Context* file_context);
+void print_section_headers(const File_Context* fc);
+
+/****************************** FUNCTION PROTOTYPES *******************************/
 
 void print_banner() {
 
@@ -132,8 +147,8 @@ void print_coff_header(const File_Context* file_context) {
     print_checkpoint("PARSED COFF HEADER!");
 }
 
-void print_optional_header(const Optional_Header* optional_header) {
-    if (optional_header == NULL) {
+void print_optional_header(const File_Context* file_context) {
+    if (file_context->optional_header == NULL) {
         print_error("Optional Header is NULL!\n");
         return;
     }
@@ -142,48 +157,48 @@ void print_optional_header(const Optional_Header* optional_header) {
     PRINT_STRING_ROW("Field", "Value");
     printf("\t╠════════════════════════════════════════════════════════════════════════════════╣\n");
 
-    if(optional_header->magic_number == PE32) {
+    if(file_context->optional_header->magic_number == PE32) {
         PRINT_STRING_ROW("Header Type", "PE32");
     }
     else {
         PRINT_STRING_ROW("Header Type", "PE32+");
     }
 
-    PRINT_NUMBER_ROW("Major Linker Version", optional_header->variant.pe32.MajorLinkerVersion);
-    PRINT_NUMBER_ROW("Minor Linker Version", optional_header->variant.pe32.MinorLinkerVersion);
-    PRINT_HEXA_ROW("Size of Code", optional_header->variant.pe32.SizeOfCode);
-    PRINT_HEXA_ROW("Size of Initialized Data", optional_header->variant.pe32.SizeOfInitializedData);
-    PRINT_HEXA_ROW("Size of Uninitialized Data", optional_header->variant.pe32.SizeOfUninitializedData);
-    PRINT_HEXA_ROW("Address of Entry Point", optional_header->variant.pe32.AddressOfEntryPoint);
-    PRINT_HEXA_ROW("Base of Code", optional_header->variant.pe32.BaseOfCode);
+    PRINT_NUMBER_ROW("Major Linker Version", file_context->optional_header->variant.pe32.MajorLinkerVersion);
+    PRINT_NUMBER_ROW("Minor Linker Version", file_context->optional_header->variant.pe32.MinorLinkerVersion);
+    PRINT_HEXA_ROW("Size of Code", file_context->optional_header->variant.pe32.SizeOfCode);
+    PRINT_HEXA_ROW("Size of Initialized Data", file_context->optional_header->variant.pe32.SizeOfInitializedData);
+    PRINT_HEXA_ROW("Size of Uninitialized Data", file_context->optional_header->variant.pe32.SizeOfUninitializedData);
+    PRINT_HEXA_ROW("Address of Entry Point", file_context->optional_header->variant.pe32.AddressOfEntryPoint);
+    PRINT_HEXA_ROW("Base of Code", file_context->optional_header->variant.pe32.BaseOfCode);
 
-    if(optional_header->magic_number == PE32) {
-        PRINT_HEXA_ROW("Base of Data", optional_header->variant.pe32.BaseOfData);
+    if(file_context->optional_header->magic_number == PE32) {
+        PRINT_HEXA_ROW("Base of Data", file_context->optional_header->variant.pe32.BaseOfData);
     }
 
-    PRINT_HEXA_ROW("Image Base", optional_header->variant.pe32.ImageBase);
-    PRINT_HEXA_ROW("Section Alignment", optional_header->variant.pe32.SectionAlignment);
-    PRINT_HEXA_ROW("File Alignment", optional_header->variant.pe32.FileAlignment);
+    PRINT_HEXA_ROW("Image Base", file_context->optional_header->variant.pe32.ImageBase);
+    PRINT_HEXA_ROW("Section Alignment", file_context->optional_header->variant.pe32.SectionAlignment);
+    PRINT_HEXA_ROW("File Alignment", file_context->optional_header->variant.pe32.FileAlignment);
 
-    PRINT_NUMBER_ROW("Major OS Version", optional_header->variant.pe32.MajorOperatingSystemVersion);
-    PRINT_NUMBER_ROW("Minor OS Version", optional_header->variant.pe32.MinorOperatingSystemVersion);
-    PRINT_NUMBER_ROW("Major Image Version", optional_header->variant.pe32.MajorImageVersion);
-    PRINT_NUMBER_ROW("Minor Image Version", optional_header->variant.pe32.MinorImageVersion);
-    PRINT_NUMBER_ROW("Major Subsystem Version", optional_header->variant.pe32.MajorSubsystemVersion);
-    PRINT_NUMBER_ROW("Minor Subsystem Version", optional_header->variant.pe32.MinorSubsystemVersion);
+    PRINT_NUMBER_ROW("Major OS Version", file_context->optional_header->variant.pe32.MajorOperatingSystemVersion);
+    PRINT_NUMBER_ROW("Minor OS Version", file_context->optional_header->variant.pe32.MinorOperatingSystemVersion);
+    PRINT_NUMBER_ROW("Major Image Version", file_context->optional_header->variant.pe32.MajorImageVersion);
+    PRINT_NUMBER_ROW("Minor Image Version", file_context->optional_header->variant.pe32.MinorImageVersion);
+    PRINT_NUMBER_ROW("Major Subsystem Version", file_context->optional_header->variant.pe32.MajorSubsystemVersion);
+    PRINT_NUMBER_ROW("Minor Subsystem Version", file_context->optional_header->variant.pe32.MinorSubsystemVersion);
 
-    PRINT_HEXA_ROW("Win32 Version Value", optional_header->variant.pe32.Win32VersionValue);
-    PRINT_HEXA_ROW("Size of Image", optional_header->variant.pe32.SizeOfImage);
-    PRINT_HEXA_ROW("Size of Headers", optional_header->variant.pe32.SizeOfHeaders);
-    PRINT_HEXA_ROW("CheckSum", optional_header->variant.pe32.CheckSum);
-    PRINT_HEXA_ROW("Subsystem", optional_header->variant.pe32.Subsystem);
-    PRINT_HEXA_ROW("Dll Characteristics", optional_header->variant.pe32.DllCharacteristics);
-    PRINT_HEXA_ROW("Size of Stack Reserve", optional_header->variant.pe32.SizeOfStackReserve);
-    PRINT_HEXA_ROW("Size of Stack Commit", optional_header->variant.pe32.SizeOfStackCommit);
-    PRINT_HEXA_ROW("Size of Heap Reserve", optional_header->variant.pe32.SizeOfHeapReserve);
-    PRINT_HEXA_ROW("Size of Heap Commit", optional_header->variant.pe32.SizeOfHeapCommit);
-    PRINT_HEXA_ROW("Loader Flags", optional_header->variant.pe32.LoaderFlags);
-    PRINT_HEXA_ROW("Number of RVA and Sizes", optional_header->variant.pe32.NumberOfRvaAndSizes);
+    PRINT_HEXA_ROW("Win32 Version Value", file_context->optional_header->variant.pe32.Win32VersionValue);
+    PRINT_HEXA_ROW("Size of Image", file_context->optional_header->variant.pe32.SizeOfImage);
+    PRINT_HEXA_ROW("Size of Headers", file_context->optional_header->variant.pe32.SizeOfHeaders);
+    PRINT_HEXA_ROW("CheckSum", file_context->optional_header->variant.pe32.CheckSum);
+    PRINT_HEXA_ROW("Subsystem", file_context->optional_header->variant.pe32.Subsystem);
+    PRINT_HEXA_ROW("Dll Characteristics", file_context->optional_header->variant.pe32.DllCharacteristics);
+    PRINT_HEXA_ROW("Size of Stack Reserve", file_context->optional_header->variant.pe32.SizeOfStackReserve);
+    PRINT_HEXA_ROW("Size of Stack Commit", file_context->optional_header->variant.pe32.SizeOfStackCommit);
+    PRINT_HEXA_ROW("Size of Heap Reserve", file_context->optional_header->variant.pe32.SizeOfHeapReserve);
+    PRINT_HEXA_ROW("Size of Heap Commit", file_context->optional_header->variant.pe32.SizeOfHeapCommit);
+    PRINT_HEXA_ROW("Loader Flags", file_context->optional_header->variant.pe32.LoaderFlags);
+    PRINT_HEXA_ROW("Number of RVA and Sizes", file_context->optional_header->variant.pe32.NumberOfRvaAndSizes);
     
     printf("\t╚════════════════════════════════════════════════════════════════════════════════╝\n");
 }

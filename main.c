@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 			
 			uint64_t* byte_count = extract_file_byte_count(file_context->file);
 
-			printf("Entropy: %lf", entropy(byte_count, file_context->size));
+			printf("Entropy: %lf\n", entropy(byte_count, file_context->size));
 			free(byte_count);
 		}
 	}

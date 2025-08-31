@@ -30,7 +30,7 @@
  * - _mode
  */
 
-typedef struct {
+typedef struct File_Context {
     FILE* file;
     char* path;
     char* _mode;

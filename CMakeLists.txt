@@ -19,3 +19,6 @@ target_link_libraries(gorgot PRIVATE allLibraries m)
 
 # Include headers
 target_include_directories(gorgot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Set compiler flags
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -O3")

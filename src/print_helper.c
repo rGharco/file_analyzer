@@ -30,6 +30,7 @@
 
 void print_banner();
 void print_usage(const char* main_exe);
+void print_legend();
 void print_action(const char* message);
 void print_error(const char* message);
 void print_success(const char* message);
@@ -97,6 +98,13 @@ void print_usage(const char* main_exe) {
         "\n",
         main_exe, main_exe, main_exe);
 
+}
+
+void print_legend() {
+	print_action("LEGEND");
+	printf(""BOLD_GREEN"BOLD GREEN: Represent SUSPICIOUS activity, it is not a clear indicator of wheather or not something is malicious but indicates an outlier."RESET"\n");
+	printf(""BOLD_YELLOW"BOLD YELLOW: Represents HIGHLY-SUSPICIOUS activity, much higher confidence level and indicator of an anomaly, unlikely to be a coincidence."RESET"\n");
+	printf(""BOLD_RED"BOLD RED: Represents MALICIOUS activity, a clear indicator of malicious intent and not an accident or misconfiguration."RESET"\n");
 }
 
 void print_action(const char* message) {
@@ -225,6 +233,4 @@ void print_section_headers(const File_Context* fc) {
 
     printf("\t╚═══════════════════════════════════════════════════════════════════════════════════════════════════╝\n\n");
 }
-
-
 

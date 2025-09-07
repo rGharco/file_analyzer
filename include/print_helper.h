@@ -7,6 +7,7 @@
 
 void print_banner();
 void print_usage(const char* main_exe);
+void print_legend();
 void print_action(const char* message);
 void print_error(const char* message);
 void print_success(const char* message);

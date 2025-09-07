@@ -24,6 +24,9 @@ typedef struct File_Context File_Context;
 
 typedef struct Heuristics Heuristics;
 
+// Will contain information about section header, things like entropy, imports exports, strings, etc.
+typedef struct Section_Data Section_Data;
+
 typedef enum File_Status File_Status;
 
 /********** PUBLIC API **********/
@@ -36,19 +39,10 @@ double get_file_entropy(const Heuristics* heuristics);
 double get_malicious_score(const Heuristics* heuristics);
 uint8_t get_raised_flags(const Heuristics* heuristics);
 
-/********** PUBLIC API **********/
-
-
-
-/********** PRIVATE FUNCTIONS **********/
-
-double entropy(uint64_t byte_count[], uint64_t size);
-uint64_t* extract_file_byte_count(FILE* in_File);
-
-void add_malicious_score(Heuristics* heuristics, double value);
 void analyze_file_entropy(Heuristics* heuristics);
+void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
 
-/********** PRIVATE FUNCTIONS **********/
+/********** PUBLIC API **********/
 
 #endif
 

@@ -2,8 +2,15 @@
 #include "../include/print_helper.h"
 #include "../include/file_context.h"
 
+// ANSI colors for printing
+#define BOLD_RED "\e[1;31m"
+#define BOLD_YELLOW "\e[1;33m"
+#define BOLD_GREEN "\e[1;92m"
+#define RESET "\e[0m"
+
 #define BYTE_OUTCOMES 256
 #define BUFFER_SIZE 1024
+#define SECTION_ENTROPY_BUFFER_SIZE 1000000 //use 1MB as buffer for sections
 
 // Values to calculate the malicious score of a file
 #define SUSPICIOUS_SCORE 1.5
@@ -15,10 +22,22 @@
 #define ENTROPY_SUSPICIOUS_HIGH  7.6
 #define ENTROPY_MALICIOUS        8.0
 
+// Heuristic printers for specific cases
+#define PRINT_FILE_ENTROPY(confidence_level, entropy, reset) printf("%sFile Entropy: %lf%s\n", confidence_level, entropy, reset)
+
+#define PRINT_SECTION_ENTROPY(section_name, entropy) printf("Section: %s\tEntropy: %lf\n", section_name, entropy)
+#define PRINT_SUSPICIOUS_SECTION_ENTROPY(confidence_level, section_name, entropy) printf("%sSection: %s\tEntropy: %lf"RESET"\n", confidence_level, section_name, entropy)
+
 struct Heuristics{
 	double _file_entropy;
+	Section_Data* _sections;
 	uint8_t _raised_suspicious_flags;
        	double _malicious_score;
+};
+
+struct Section_Data {
+	char _section_name [8];
+	double _entropy;
 };
 
 enum File_Status {
@@ -28,20 +47,40 @@ enum File_Status {
 	MALICIOUS
 };
 
-/********** PUBLIC API **********/
+/********** PUBLIC API DECLARATION **********/
 
 Heuristics* create_heuristics (File_Context* fc);
 void free_heuristics(Heuristics* heuristics);
 
 double get_file_entropy(const Heuristics* heuristics);
+double get_malicious_score(const Heuristics* heuristics);
+uint8_t get_raised_flags(const Heuristics* heuristics);
 
-/********** PUBLIC API **********/
+void analyze_file_entropy(Heuristics* heuristics);
+void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
+
+/********** PUBLIC API DECLARATION **********/
+
+/********** PRIVATE FUNCTIONS DECLARATION **********/
+
+double entropy(uint64_t byte_count[], uint64_t size);
+uint64_t* extract_file_byte_count(FILE* in_File);
+void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t buffer_size);
+
+void add_malicious_score(Heuristics* heuristics, double value);
+
+void parse_section_entropy(Heuristics* heuristics, File_Context* fc);
+
+/********** PRIVATE FUNCTIONS DECLARATION **********/
+
 
 /* Raw data such as file entropy will be stored in the heuristic struct upon creation 
  * the analysis of the raw data for malicious score calculation will be done in separate functions and later on 
  * added to a general function that will analyze the whole set of raw data sequentially (e.g analyze_file_entropy(), analyze_section_entropy() will converge into
  * analyze_heuristics() in the end
  */
+
+/********** PUBLIC API **********/
 
 Heuristics* create_heuristics (File_Context* fc) {
 	if(fc == NULL) {
@@ -59,6 +98,13 @@ Heuristics* create_heuristics (File_Context* fc) {
 	/***** DEFAULT INITIALIZERS *****/
 
 	new_heuristics->_file_entropy = 0.0;
+	
+	new_heuristics->_sections = (Section_Data*)malloc(sizeof(Section_Data) * fc->coff_header->number_of_sections);
+
+	if (new_heuristics->_sections == NULL) {
+		print_error("Could not initialize section specific heuristics! (ERR: create_heuristics())");
+	}
+
 	new_heuristics->_raised_suspicious_flags = 0;
 	new_heuristics->_malicious_score = 0.0;
 
@@ -78,10 +124,11 @@ Heuristics* create_heuristics (File_Context* fc) {
 }
 
 void free_heuristics(Heuristics* heuristics) {
-	if (heuristics != NULL) free(heuristics);
+	if (heuristics != NULL) return;
+	if (heuristics->_sections != NULL) free(heuristics->_sections);
+	
+	free(heuristics);
 }
-
-
 
 
 /************ GETTERS ***********/
@@ -100,6 +147,64 @@ uint8_t get_raised_flags(const Heuristics* heuristics) {
 
 /************ GETTERS ***********/
 
+void analyze_file_entropy(Heuristics* heuristics) {
+	double file_entropy = get_file_entropy(heuristics);
+
+	if (file_entropy > ENTROPY_SUSPICIOUS_LOW && file_entropy < ENTROPY_SUSPICIOUS_HIGH) {
+    		add_malicious_score(heuristics, SUSPICIOUS_SCORE);
+		heuristics->_raised_suspicious_flags++;
+		PRINT_FILE_ENTROPY(BOLD_GREEN, heuristics->_file_entropy, RESET);
+		return;
+	}
+	else if (file_entropy > ENTROPY_SUSPICIOUS_HIGH && file_entropy < ENTROPY_MALICIOUS) {
+    		add_malicious_score(heuristics, HIGHLY_SUSPICIOUS_SCORE);
+		heuristics->_raised_suspicious_flags++;
+		PRINT_FILE_ENTROPY(BOLD_YELLOW, heuristics->_file_entropy, RESET);
+		return;
+	}
+	else if (file_entropy >= ENTROPY_MALICIOUS) {
+    		add_malicious_score(heuristics, MALICIOUS_SCORE);
+		heuristics->_raised_suspicious_flags++;
+		PRINT_FILE_ENTROPY(BOLD_RED, heuristics->_file_entropy, RESET);
+		return;
+	}
+
+	PRINT_FILE_ENTROPY("", heuristics->_file_entropy, "");
+}
+
+void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc) {
+	File_Context* file_context = (File_Context*)fc; //cast away const for internal parsing
+
+	parse_section_entropy(heuristics, file_context);	
+
+	for(int i = 0; i < fc->coff_header->number_of_sections; i++) {
+		double entropy = heuristics->_sections[i]._entropy;
+
+		if (entropy > ENTROPY_SUSPICIOUS_LOW && entropy < ENTROPY_SUSPICIOUS_HIGH) {
+			add_malicious_score(heuristics, SUSPICIOUS_SCORE);
+			heuristics->_raised_suspicious_flags++;
+			PRINT_SUSPICIOUS_SECTION_ENTROPY(BOLD_GREEN, heuristics->_sections[i]._section_name, entropy);	
+			continue;
+		}
+		else if (entropy > ENTROPY_SUSPICIOUS_HIGH && entropy < ENTROPY_MALICIOUS) {
+			add_malicious_score(heuristics, HIGHLY_SUSPICIOUS_SCORE);
+			heuristics->_raised_suspicious_flags++;
+			PRINT_SUSPICIOUS_SECTION_ENTROPY(BOLD_YELLOW, heuristics->_sections[i]._section_name, entropy);	
+			continue;
+		}
+		else if (entropy >= ENTROPY_MALICIOUS) {
+			add_malicious_score(heuristics, MALICIOUS_SCORE);
+			heuristics->_raised_suspicious_flags++;	
+			PRINT_SUSPICIOUS_SECTION_ENTROPY(BOLD_RED, heuristics->_sections[i]._section_name, entropy);	
+			continue;
+		}
+		
+		PRINT_SECTION_ENTROPY(heuristics->_sections[i]._section_name, entropy);
+	}
+}
+
+
+/********** PUBLIC API **********/
 
 
 /********** PRIVATE FUNCTIONS **********/
@@ -117,17 +222,21 @@ double entropy(uint64_t byte_count[], uint64_t size) {
     return entropy;
 }
 
+void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t bytes_read) {
+	for(int i = 0; i < bytes_read; i++) {
+            byte_count[buffer[i]]++;
+        }
+}
+
 //Caller of this function free the pointer to the array returned
 uint64_t* extract_file_byte_count(FILE* in_File) {
     uint8_t buffer[BUFFER_SIZE] = {0};
     uint64_t* byte_count = calloc(BYTE_OUTCOMES, sizeof(uint64_t));
-    uint64_t n;
+    size_t n;
 
     rewind(in_File);
     while((n = fread(buffer,1,BUFFER_SIZE,in_File)) != 0) {
-        for(int i = 0; i < n; i++) {
-            byte_count[buffer[i]]++;
-        }
+	    increment_byte_count(byte_count, buffer, n);
     }
 
     return byte_count;
@@ -137,21 +246,54 @@ void add_malicious_score(Heuristics* heuristics, double value) {
 	if (heuristics != NULL) heuristics->_malicious_score += value;
 }
 
-void analyze_file_entropy(Heuristics* heuristics) {
-	double file_entropy = get_file_entropy(heuristics);
+void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
+	uint8_t buffer[SECTION_ENTROPY_BUFFER_SIZE] = {0};
+	uint64_t* byte_count = calloc(BYTE_OUTCOMES, sizeof(uint64_t));
+	size_t  n = 0;
+	uint8_t nr_of_sections = fc->coff_header->number_of_sections;
 
-	if (file_entropy > ENTROPY_SUSPICIOUS_LOW && file_entropy < ENTROPY_SUSPICIOUS_HIGH) {
-    		add_malicious_score(heuristics, SUSPICIOUS_SCORE);
-		heuristics->_raised_suspicious_flags++;
+	Section_Data* sections_info = calloc(nr_of_sections, sizeof(Section_Data));
+
+	for (uint8_t i = 0; i < nr_of_sections; i++) {
+		memset(byte_count, 0, BYTE_OUTCOMES * sizeof(uint64_t)); //reset per section
+
+		char section_name[9]; // 8 characters + null terminator
+		memcpy(section_name, fc->sections[i].Name, 8);
+		section_name[8] = '\0';
+
+		uint32_t size_of_raw_data = fc->sections[i].SizeOfRawData; 
+		const uint32_t pointer_to_raw_data = fc->sections[i].PointerToRawData;
+
+		if(fseek(fc->file, pointer_to_raw_data, SEEK_SET) != 0) {
+			print_error("Could not seek to the section pointer. analyze_section_entropy() failed!");
+			return;
+		}
+
+		uint32_t section_buffer = SECTION_ENTROPY_BUFFER_SIZE; // prevents comparison between unsigned int and int
+
+		if(size_of_raw_data < section_buffer) {
+			n = fread(buffer, 1,size_of_raw_data, fc->file);
+			increment_byte_count(byte_count, buffer, n);
+		}
+		else {
+			uint32_t remained = size_of_raw_data;
+			while (remained > section_buffer) {
+				n = fread(buffer, 1, section_buffer, fc->file);
+				increment_byte_count(byte_count, buffer, n);
+				remained -= section_buffer;
+			}	
+			n = fread(buffer, 1, remained, fc->file);
+			increment_byte_count(byte_count, buffer, n);
+		}
+
+		double section_entropy = entropy(byte_count, size_of_raw_data);
+
+		memcpy(sections_info[i]._section_name, section_name, 9);
+	       	sections_info[i]._entropy = section_entropy;	
 	}
-	else if (file_entropy > ENTROPY_SUSPICIOUS_HIGH && file_entropy < ENTROPY_MALICIOUS) {
-    		add_malicious_score(heuristics, HIGHLY_SUSPICIOUS_SCORE);
-		heuristics->_raised_suspicious_flags++;
-	}
-	else if (file_entropy >= ENTROPY_MALICIOUS) {
-    		add_malicious_score(heuristics, MALICIOUS_SCORE);
-		heuristics->_raised_suspicious_flags++;
-	}
-}	
+	
+	heuristics->_sections = sections_info;
+}
+
 
 /********** PRIVATE FUNCTIONS **********/

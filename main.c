@@ -40,21 +40,27 @@ int main(int argc, char* argv[]) {
 
 	if(strcmp(argv[2], "-e") == 0) {
 		print_banner();
+		print_legend();
 		if(is_executable(file_context,&ms_dos,&pe_signature) == PE_PARSE_SUCCESS) {
 			
 			parse_coff_header(file_context);
 			parse_optional_header(file_context);
 			parse_section_header(file_context);
 
+			print_action("OBTAINING HEURISTICS");
 
 			Heuristics* heuristics = create_heuristics(file_context);
 			
-			printf("\nFILE SIZE: %.2lfMB\n", (double)file_context->size / 1048576);
-			printf("Entropy: %lf\n", get_file_entropy(heuristics));
-
 			analyze_file_entropy(heuristics);
+			printf("\n");
+			analyze_section_entropy(heuristics, file_context);
+
+			printf("\nFILE SIZE: %.2lfMB\n", (double)file_context->size / 1048576);
+			
+			print_action("ANALYSIS RESULTS");	
 			printf("Malicious Score: %lf\n", get_malicious_score(heuristics));
 			printf("Raised Flags: %u\n", get_raised_flags(heuristics));
+
 
 			free_heuristics(heuristics);
 		}

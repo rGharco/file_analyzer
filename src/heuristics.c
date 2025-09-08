@@ -8,9 +8,10 @@
 #define BOLD_GREEN "\e[1;92m"
 #define RESET "\e[0m"
 
+// Useful variables
 #define BYTE_OUTCOMES 256
-#define BUFFER_SIZE 1024
-#define SECTION_ENTROPY_BUFFER_SIZE 1000000 //use 1MB as buffer for sections
+#define BUFFER_SIZE 1000000
+#define IMAGE_SCN_MEM_EXECUTE_FLAG 0x20000000 
 
 // Values to calculate the malicious score of a file
 #define SUSPICIOUS_SCORE 1.5
@@ -25,19 +26,26 @@
 // Heuristic printers for specific cases
 #define PRINT_FILE_ENTROPY(confidence_level, entropy, reset) printf("%sFile Entropy: %lf%s\n", confidence_level, entropy, reset)
 
-#define PRINT_SECTION_ENTROPY(section_name, entropy) printf("Section: %s\tEntropy: %lf\n", section_name, entropy)
-#define PRINT_SUSPICIOUS_SECTION_ENTROPY(confidence_level, section_name, entropy) printf("%sSection: %s\tEntropy: %lf"RESET"\n", confidence_level, section_name, entropy)
+#define PRINT_SECTION_ENTROPY(section_name, entropy) printf("Section: %-9s\tEntropy: %lf\n", section_name, entropy)
+#define PRINT_SUSPICIOUS_SECTION_ENTROPY(confidence_level, section_name, entropy) printf("%sSection: %-9s\tEntropy: %lf"RESET"\n", confidence_level, section_name, entropy)
+
+#define PRINT_SUSPICIOUS_SECTION_FLAG(confidence_level, section_name) \
+       	printf("%sSection: %s\tFlag: 0x%X - is not .text section and has executable flag set"RESET"\n", confidence_level, section_name, IMAGE_SCN_MEM_EXECUTE_FLAG)
 
 struct Heuristics{
+	uint8_t* _sha3_384_digest;
+	uint8_t* _sha256_digest;
+	uint8_t* _md5_digest;
 	double _file_entropy;
 	Section_Data* _sections;
 	uint8_t _raised_suspicious_flags;
-       	double _malicious_score;
+	double _malicious_score;
 };
 
 struct Section_Data {
 	char _section_name [8];
 	double _entropy;
+	bool _has_suspicious_executable_flag; // when a section other than .text has the IMAGE_SCN_MEM_EXECUTE flag set
 };
 
 enum File_Status {
@@ -58,6 +66,7 @@ uint8_t get_raised_flags(const Heuristics* heuristics);
 
 void analyze_file_entropy(Heuristics* heuristics);
 void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
+int calculate_file_hash(Heuristics* heuristics, File_Context* fc);
 
 /********** PUBLIC API DECLARATION **********/
 
@@ -203,6 +212,149 @@ void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc) {
 	}
 }
 
+void analyze_section_flags(Heuristics* heuristics, const File_Context* fc) {
+	for(uint8_t i = 0; i < fc->coff_header->number_of_sections; i++) {
+		if(fc->sections[i].Characteristics == (uint32_t)IMAGE_SCN_MEM_EXECUTE_FLAG) {
+			PRINT_SUSPICIOUS_SECTION_FLAG(BOLD_YELLOW, fc->sections[i].Name);
+			add_malicious_score(heuristics, HIGHLY_SUSPICIOUS_SCORE);
+			heuristics->_raised_suspicious_flags++;
+			heuristics->_sections[i]._has_suspicious_executable_flag = true;			
+		}
+	}
+}
+
+int calculate_file_hash(Heuristics* heuristics, File_Context* fc) {
+	EVP_MD_CTX* sha256_ctx = NULL;
+	EVP_MD_CTX* md5_ctx = NULL;
+	EVP_MD_CTX* sha3_384_ctx = NULL;
+
+    	EVP_MD* sha256 = NULL;
+	EVP_MD* md5 = NULL;
+	EVP_MD* sha3_384 = NULL;
+
+    	uint8_t buffer[BUFFER_SIZE] = {0};
+	size_t bytes_read = 0; 
+
+    	unsigned int sha256_len = 0;
+	unsigned int md5_len = 0;
+	unsigned int sha3_384_len = 0;
+
+    	unsigned char* sha256_outdigest = NULL;
+    	unsigned char* md5_outdigest = NULL;
+	unsigned char* sha3_384_outdigest = NULL;
+
+	int ret = 1;
+
+    	/* Create a context for the digest operation */
+	sha256_ctx = EVP_MD_CTX_new();
+    	if (sha256_ctx == NULL)
+        	goto err;
+
+	md5_ctx = EVP_MD_CTX_new();
+	if (md5_ctx == NULL)
+		goto err;
+
+	sha3_384_ctx = EVP_MD_CTX_new();
+	if (sha3_384_ctx == NULL)
+		goto err;
+
+	sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+	if (sha256 == NULL)
+		goto err;
+
+	md5 = EVP_MD_fetch(NULL, "MD5", NULL);
+	if (md5 == NULL)
+		goto err;
+
+	sha3_384 = EVP_MD_fetch(NULL, "SHA3-384", NULL);
+	if (sha3_384 == NULL)
+		goto err;
+
+   	/* Initialise the digest operation */
+   	if (!EVP_DigestInit_ex(sha256_ctx, sha256, NULL))
+       		goto err;
+
+	if (!EVP_DigestInit_ex(md5_ctx, md5, NULL)) 
+		goto err;
+
+	if (!EVP_DigestInit_ex(sha3_384_ctx, sha3_384, NULL))
+		goto err;
+
+    	/*
+     	* Pass the message to be digested. This can be passed in over multiple
+     	* EVP_DigestUpdate calls if necessary
+     	*/
+
+	rewind(fc->file);	
+	while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, fc->file)) != 0) {		
+   		if (!EVP_DigestUpdate(sha256_ctx, buffer, bytes_read))
+        		goto err;
+
+		if (!EVP_DigestUpdate(md5_ctx, buffer, bytes_read)) 
+			goto err;
+
+		if (!EVP_DigestUpdate(sha3_384_ctx, buffer, bytes_read))
+		       goto err;	
+	}
+
+	/* Allocate the output buffer */
+	sha256_outdigest = OPENSSL_malloc(EVP_MD_get_size(sha256));
+	if (sha256_outdigest == NULL)
+		goto err;
+
+	md5_outdigest = OPENSSL_malloc(EVP_MD_get_size(md5));
+	if (md5_outdigest == NULL)
+		goto err;
+
+	sha3_384_outdigest = OPENSSL_malloc(EVP_MD_get_size(sha3_384));
+	if (sha3_384_outdigest == NULL)
+		goto err;
+
+	/* Now calculate the digest itself */
+	if (!EVP_DigestFinal_ex(sha256_ctx, sha256_outdigest, &sha256_len))
+		goto err;
+
+	if (!EVP_DigestFinal_ex(md5_ctx, md5_outdigest, &md5_len))
+		goto err;
+
+	if (!EVP_DigestFinal_ex(sha3_384_ctx, sha3_384_outdigest, &sha3_384_len))
+		goto err;
+
+	heuristics->_sha3_384_digest = sha3_384_outdigest;
+	heuristics->_sha256_digest = sha256_outdigest;
+	heuristics->_md5_digest = md5_outdigest;
+
+	printf("%-11s","SHA3-384:");
+	for (unsigned int i = 0; i < sha3_384_len; i++)
+    	printf("%02x", sha3_384_outdigest[i]);
+	printf("\n");
+
+	printf("%-11s","SHA256:");
+	for (unsigned int i = 0; i < sha256_len; i++)
+    	printf("%02x", sha256_outdigest[i]);
+	printf("\n");
+
+	printf("%-11s","MD5:");
+	for (unsigned int i = 0; i < md5_len; i++)
+    	printf("%02x", md5_outdigest[i]);
+	printf("\n");
+
+	ret = 0;
+
+ err:
+    /* Clean up all the resources we allocated */
+    OPENSSL_free(sha256_outdigest);
+    OPENSSL_free(md5_outdigest);
+    EVP_MD_free(sha256);
+    EVP_MD_free(md5);
+    EVP_MD_CTX_free(sha256_ctx);
+    EVP_MD_CTX_free(md5_ctx);
+
+    if (ret != 0)
+       ERR_print_errors_fp(stderr);
+
+    return ret;
+}
 
 /********** PUBLIC API **********/
 
@@ -247,7 +399,7 @@ void add_malicious_score(Heuristics* heuristics, double value) {
 }
 
 void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
-	uint8_t buffer[SECTION_ENTROPY_BUFFER_SIZE] = {0};
+	uint8_t buffer[BUFFER_SIZE] = {0};
 	uint64_t* byte_count = calloc(BYTE_OUTCOMES, sizeof(uint64_t));
 	size_t  n = 0;
 	uint8_t nr_of_sections = fc->coff_header->number_of_sections;
@@ -269,7 +421,7 @@ void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
 			return;
 		}
 
-		uint32_t section_buffer = SECTION_ENTROPY_BUFFER_SIZE; // prevents comparison between unsigned int and int
+		uint32_t section_buffer = BUFFER_SIZE; // prevents comparison between unsigned int and int
 
 		if(size_of_raw_data < section_buffer) {
 			n = fread(buffer, 1,size_of_raw_data, fc->file);

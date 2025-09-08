@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <stdio.h>
+#include <openssl/evp.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
 
 /**
  * @brief Holds indicators about the file each which wil have a role in determining the file nature
@@ -15,8 +18,12 @@
  * the API.
  *
  * Internal fields:
- * - _file_entropy - should not be modified, and only calculated 
-*/
+ * - _sha3_384, _sha256, _md5 digests, are used to store the hash of the file
+ * - _file_entropy - should not be modified, and only calculated
+ * - _sections - contains an array of Section_Data structs that hold in the struct name, entropy and if it has any weird characteristics flags 
+ * - _raised_suspicious_flags - the amount of flags raised when an indicators is off, while the score can be relative the flags are absolute values
+ * - _malicious_score - the confidence score of how malicious a file is
+*/ 
 
 // Forward declaration of File_Context
 struct File_Context;
@@ -41,6 +48,8 @@ uint8_t get_raised_flags(const Heuristics* heuristics);
 
 void analyze_file_entropy(Heuristics* heuristics);
 void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
+void analyze_section_flags(Heuristics* heuristics, const File_Context* fc); // Checks for the IMAGE_SCN_MEM_EXECUTE flag set on any other sections than .text
+int calculate_file_hash(Heuristics* heuristics, File_Context* fc); // This function will also print the file hashes
 
 /********** PUBLIC API **********/
 

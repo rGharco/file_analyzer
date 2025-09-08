@@ -15,7 +15,9 @@ add_subdirectory(src)
 add_executable(gorgot main.c)
 
 # Add libraries
-target_link_libraries(gorgot PRIVATE allLibraries m)
+find_package(OpenSSL REQUIRED)
+target_link_libraries(allLibraries PRIVATE OpenSSL::Crypto m)
+target_link_libraries(gorgot PRIVATE allLibraries)
 
 # Include headers
 target_include_directories(gorgot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

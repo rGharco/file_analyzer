@@ -51,16 +51,18 @@ int main(int argc, char* argv[]) {
 
 			Heuristics* heuristics = create_heuristics(file_context);
 			
+			calculate_file_hash(heuristics,file_context);
+			printf("\n");
 			analyze_file_entropy(heuristics);
 			printf("\n");
 			analyze_section_entropy(heuristics, file_context);
+			analyze_section_flags(heuristics, file_context);
 
 			printf("\nFILE SIZE: %.2lfMB\n", (double)file_context->size / 1048576);
 			
 			print_action("ANALYSIS RESULTS");	
 			printf("Malicious Score: %lf\n", get_malicious_score(heuristics));
 			printf("Raised Flags: %u\n", get_raised_flags(heuristics));
-
 
 			free_heuristics(heuristics);
 		}

@@ -10,9 +10,9 @@ C-based program that parses the PE (Portable Executable) header of a file and pr
 
 Currently, the tool can read and analyze PE headers. Future enhancements include:  
 
-- **Section analysis**: Flagging unusual section characteristics (e.g., any section besides `.text` marked as executable).  
-- **Entropy calculation**: Section-based entropy to detect packed or obfuscated content.  
-- **Hash computation**: MD5 and SHA256 hashes stored in a local database with classification flags (Suspicious, Malicious, Clean).  
+- **Section analysis**: Flagging unusual section characteristics (e.g., any section besides `.text` marked as executable).  ✅
+- **Entropy calculation**: Section-based entropy to detect packed or obfuscated content. ✅  
+- **Hash computation**: MD5 and SHA256 hashes stored in a local database with classification flags (Suspicious, Malicious, Clean). 
 - **YARA rules**: String and byte pattern matching for malware detection.  
 - **CTI sharing**: Reporting findings in TLP-compliant, shareable formats.  
 - **Cross-platform support**: Currently tested on Windows and Ubuntu, with ongoing work to improve compatibility.  

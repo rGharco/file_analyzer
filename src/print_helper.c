@@ -8,11 +8,6 @@
 #include "../include/print_helper.h"
 #include "../include/pe_utils.h"
 #include "../include/constants.h"
-#include <time.h>
-
-#if _WIN32
-#include <windows.h>
-#endif
 
 #define PRINT_STRING_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"%-45s"RESET" ║\n", field, value)
 #define PRINT_HEXA_ROW(field, value) printf("\t║ "BOLD_RED"%-30s"RESET" │ "BOLD_CYAN"0x%-43X"RESET" ║\n", field, value);

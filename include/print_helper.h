@@ -3,7 +3,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 #include "../include/file_context.h"
+
+#if _WIN32
+#include <windows.h>
+#endif
 
 void print_banner();
 void print_usage(const char* main_exe);

@@ -7,6 +7,13 @@
 #include "../include/coff_header.h"
 #include "../include/optional_header.h"
 #include "../include/section_header.h"
+#include <malloc.h>
+#include <string.h>
+
+#ifdef _WIN32
+	#include <windows.h>
+	#include <fileapi.h>
+#endif
 
 /**
  * @brief Holds information about the current file being analyzed.

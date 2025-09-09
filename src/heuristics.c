@@ -10,7 +10,7 @@
 
 // Useful variables
 #define BYTE_OUTCOMES 256
-#define BUFFER_SIZE 1000000
+#define BUFFER_SIZE 65536 // 64KB  
 #define IMAGE_SCN_MEM_EXECUTE_FLAG 0x20000000 
 
 // Values to calculate the malicious score of a file
@@ -64,30 +64,28 @@ double get_file_entropy(const Heuristics* heuristics);
 double get_malicious_score(const Heuristics* heuristics);
 uint8_t get_raised_flags(const Heuristics* heuristics);
 
-void analyze_file_entropy(Heuristics* heuristics);
+void analyze_file_entropy(Heuristics* heuristics, File_Context* fc);
 void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
 int calculate_file_hash(Heuristics* heuristics, File_Context* fc);
 
 /********** PUBLIC API DECLARATION **********/
 
-/********** PRIVATE FUNCTIONS DECLARATION **********/
 
-double entropy(uint64_t byte_count[], uint64_t size);
-uint64_t* extract_file_byte_count(FILE* in_File);
-void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t buffer_size);
 
-void add_malicious_score(Heuristics* heuristics, double value);
-
-void parse_section_entropy(Heuristics* heuristics, File_Context* fc);
 
 /********** PRIVATE FUNCTIONS DECLARATION **********/
 
+static double entropy(uint64_t byte_count[], uint64_t size);
+static uint64_t* extract_file_byte_count(FILE* in_File);
+static inline void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t buffer_size);
 
-/* Raw data such as file entropy will be stored in the heuristic struct upon creation 
- * the analysis of the raw data for malicious score calculation will be done in separate functions and later on 
- * added to a general function that will analyze the whole set of raw data sequentially (e.g analyze_file_entropy(), analyze_section_entropy() will converge into
- * analyze_heuristics() in the end
- */
+static inline void add_malicious_score(Heuristics* heuristics, double value);
+
+static void parse_section_entropy(Heuristics* heuristics, File_Context* fc);
+
+/********** PRIVATE FUNCTIONS DECLARATION **********/
+
+
 
 /********** PUBLIC API **********/
 
@@ -112,6 +110,8 @@ Heuristics* create_heuristics (File_Context* fc) {
 
 	if (new_heuristics->_sections == NULL) {
 		print_error("Could not initialize section specific heuristics! (ERR: create_heuristics())");
+		free(new_heuristics);
+		return NULL;
 	}
 
 	new_heuristics->_raised_suspicious_flags = 0;
@@ -119,21 +119,14 @@ Heuristics* create_heuristics (File_Context* fc) {
 
 	/***** DEFAULT INITIALIZERS *****/
 
-	uint64_t* file_byte_count = extract_file_byte_count(fc->file);
-	
-	if(file_byte_count == NULL) {
-		print_error("Could not read byte count from file! Will not calculate file entropy! (ERR: create_heuristics())");
-	}
-	else {
-		new_heuristics->_file_entropy = entropy(file_byte_count, fc->size);
-		free(file_byte_count);
-	}	
-
 	return new_heuristics;
 }
 
 void free_heuristics(Heuristics* heuristics) {
 	if (heuristics != NULL) return;
+	if (heuristics->_sha3_384_digest != NULL) free(heuristics->_sha3_384_digest);
+	if (heuristics->_sha256_digest != NULL) free (heuristics->_sha256_digest);
+	if (heuristics->_md5_digest != NULL) free (heuristics->_md5_digest);
 	if (heuristics->_sections != NULL) free(heuristics->_sections);
 	
 	free(heuristics);
@@ -156,8 +149,19 @@ uint8_t get_raised_flags(const Heuristics* heuristics) {
 
 /************ GETTERS ***********/
 
-void analyze_file_entropy(Heuristics* heuristics) {
-	double file_entropy = get_file_entropy(heuristics);
+void analyze_file_entropy(Heuristics* heuristics, File_Context* fc) {
+	uint64_t* file_byte_count = extract_file_byte_count(fc->file);
+	
+	if(file_byte_count == NULL) {
+		print_error("Could not read byte count from file! Will not calculate file entropy! (ERR: create_heuristics())");
+		return;
+	}
+	else {
+		heuristics->_file_entropy = entropy(file_byte_count, fc->size);
+		free(file_byte_count);
+	}	
+	
+	double file_entropy = heuristics->_file_entropy;
 
 	if (file_entropy > ENTROPY_SUSPICIOUS_LOW && file_entropy < ENTROPY_SUSPICIOUS_HIGH) {
     		add_malicious_score(heuristics, SUSPICIOUS_SCORE);
@@ -345,10 +349,15 @@ int calculate_file_hash(Heuristics* heuristics, File_Context* fc) {
     /* Clean up all the resources we allocated */
     OPENSSL_free(sha256_outdigest);
     OPENSSL_free(md5_outdigest);
+    OPENSSL_free(sha3_384_outdigest);
+    
     EVP_MD_free(sha256);
     EVP_MD_free(md5);
+    EVP_MD_free(sha3_384);
+	    
     EVP_MD_CTX_free(sha256_ctx);
     EVP_MD_CTX_free(md5_ctx);
+    EVP_MD_CTX_free(sha3_384_ctx);
 
     if (ret != 0)
        ERR_print_errors_fp(stderr);
@@ -361,7 +370,7 @@ int calculate_file_hash(Heuristics* heuristics, File_Context* fc) {
 
 /********** PRIVATE FUNCTIONS **********/
 
-double entropy(uint64_t byte_count[], uint64_t size) {
+static double entropy(uint64_t byte_count[], uint64_t size) {
     double entropy = 0.0;
 
     for(int i = 0; i < BYTE_OUTCOMES; i++) {
@@ -374,14 +383,14 @@ double entropy(uint64_t byte_count[], uint64_t size) {
     return entropy;
 }
 
-void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t bytes_read) {
+static inline void increment_byte_count(uint64_t byte_count[] ,const uint8_t buffer[] ,size_t bytes_read) {
 	for(int i = 0; i < bytes_read; i++) {
             byte_count[buffer[i]]++;
         }
 }
 
 //Caller of this function free the pointer to the array returned
-uint64_t* extract_file_byte_count(FILE* in_File) {
+static uint64_t* extract_file_byte_count(FILE* in_File) {
     uint8_t buffer[BUFFER_SIZE] = {0};
     uint64_t* byte_count = calloc(BYTE_OUTCOMES, sizeof(uint64_t));
     size_t n;
@@ -394,30 +403,25 @@ uint64_t* extract_file_byte_count(FILE* in_File) {
     return byte_count;
 }
 
-void add_malicious_score(Heuristics* heuristics, double value) {
+static inline void add_malicious_score(Heuristics* heuristics, double value) {
 	if (heuristics != NULL) heuristics->_malicious_score += value;
 }
 
-void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
+static void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
 	uint8_t buffer[BUFFER_SIZE] = {0};
 	uint64_t* byte_count = calloc(BYTE_OUTCOMES, sizeof(uint64_t));
 	size_t  n = 0;
 	uint8_t nr_of_sections = fc->coff_header->number_of_sections;
 
-	Section_Data* sections_info = calloc(nr_of_sections, sizeof(Section_Data));
-
 	for (uint8_t i = 0; i < nr_of_sections; i++) {
 		memset(byte_count, 0, BYTE_OUTCOMES * sizeof(uint64_t)); //reset per section
 
-		char section_name[9]; // 8 characters + null terminator
-		memcpy(section_name, fc->sections[i].Name, 8);
-		section_name[8] = '\0';
-
-		uint32_t size_of_raw_data = fc->sections[i].SizeOfRawData; 
+		const uint32_t size_of_raw_data = fc->sections[i].SizeOfRawData; 
 		const uint32_t pointer_to_raw_data = fc->sections[i].PointerToRawData;
 
 		if(fseek(fc->file, pointer_to_raw_data, SEEK_SET) != 0) {
 			print_error("Could not seek to the section pointer. analyze_section_entropy() failed!");
+			free(byte_count); 
 			return;
 		}
 
@@ -438,13 +442,12 @@ void parse_section_entropy(Heuristics* heuristics, File_Context* fc) {
 			increment_byte_count(byte_count, buffer, n);
 		}
 
-		double section_entropy = entropy(byte_count, size_of_raw_data);
-
-		memcpy(sections_info[i]._section_name, section_name, 9);
-	       	sections_info[i]._entropy = section_entropy;	
+		memcpy(heuristics->_sections[i]._section_name,fc->sections[i].Name, 8);
+		heuristics->_sections[i]._section_name[8] = '\0';
+	       	heuristics->_sections[i]._entropy = entropy(byte_count, size_of_raw_data);
 	}
 	
-	heuristics->_sections = sections_info;
+	free(byte_count);
 }
 
 

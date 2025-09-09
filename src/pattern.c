@@ -1,9 +1,4 @@
 #include "../include/pattern.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <malloc.h>
-#include <stdbool.h>
 
 Pattern create_pattern(const char* pattern_name, const size_t nr_of_bytes, const uint8_t* byte_array) {
     Pattern pattern;

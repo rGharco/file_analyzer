@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <malloc.h>
+#include <stdbool.h>
 
 typedef struct {
 	const char* pattern_name;

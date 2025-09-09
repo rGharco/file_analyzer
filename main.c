@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 			
 			calculate_file_hash(heuristics,file_context);
 			printf("\n");
-			analyze_file_entropy(heuristics);
+			analyze_file_entropy(heuristics, file_context);
 			printf("\n");
 			analyze_section_entropy(heuristics, file_context);
 			analyze_section_flags(heuristics, file_context);

@@ -2,6 +2,9 @@
 #define PE_UTILS_H
 #include "../include/file_context.h"
 #include "../include/pattern.h"
+#include <string.h>
+#include <time.h>
+#include <stdlib.h>
 
 typedef enum {
     PE_PARSE_SUCCESS,

@@ -1,8 +1,5 @@
 #include "../include/pe_utils.h"
-#include <string.h>
-#include <stdlib.h>
 #include "../include/constants.h"
-#include <time.h>
 #include "../include/print_helper.h"
 
 #define MAGIC_NUMBER_SIZE 2 
@@ -127,8 +124,6 @@ Pe_Parse_Status parse_coff_header(File_Context* file_context) {
 
     print_success("Successfully parsed COFF header! -> printing information: ");
 
-    print_coff_header(file_context);
-
     return PE_PARSE_SUCCESS;
 }
 
@@ -221,7 +216,6 @@ Pe_Parse_Status parse_optional_header(File_Context* file_context) {
 
     file_context->optional_header = optional_header;
 
-    print_optional_header(file_context);
     print_success("Successfully parsed Optional header!");
     print_checkpoint("PARSE OPTIONAL HEADER");
 
@@ -252,7 +246,6 @@ Pe_Parse_Status parse_section_header(File_Context* file_context) {
 
     file_context->sections = sections;
 
-    print_section_headers(file_context);
     print_success("Successfully parsed section header!");
     print_checkpoint("PARSED SECTION HEADER");
 

@@ -39,14 +39,13 @@ typedef enum File_Status File_Status;
 /********** PUBLIC API **********/
 
 Heuristics* create_heuristics(File_Context* fc);
-
 void free_heuristics(Heuristics* heuristics); // Caller MUST free the heuristics struct
 
 double get_file_entropy(const Heuristics* heuristics);
 double get_malicious_score(const Heuristics* heuristics);
 uint8_t get_raised_flags(const Heuristics* heuristics);
 
-void analyze_file_entropy(Heuristics* heuristics);
+void analyze_file_entropy(Heuristics* heuristics, File_Context* fc);
 void analyze_section_entropy(Heuristics* heuristics, const File_Context* fc);
 void analyze_section_flags(Heuristics* heuristics, const File_Context* fc); // Checks for the IMAGE_SCN_MEM_EXECUTE flag set on any other sections than .text
 int calculate_file_hash(Heuristics* heuristics, File_Context* fc); // This function will also print the file hashes

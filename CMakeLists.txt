@@ -1,26 +1,36 @@
 # Set minimum CMake version
-cmake_minimum_required(VERSION 3.28.3)
+cmake_minimum_required(VERSION 3.28.3...4.0)
 
 # Setup project name and language
-project(gorgot C)
+project(gorgot
+        VERSION 1.0     
+        LANGUAGES C
+        )
 
 # Setup C standard
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-#Add subdirectories
-add_subdirectory(src)
+# Windows Build
+if (WIN32) 
+    # Add executable 
+    add_executable(gorgot windows/main.c)
 
-# Add executable 
-add_executable(gorgot main.c)
+    # Add general libraries
+    find_package(OpenSSL REQUIRED)  
 
-# Add libraries
-find_package(OpenSSL REQUIRED)
-target_link_libraries(allLibraries PRIVATE OpenSSL::Crypto m)
-target_link_libraries(gorgot PRIVATE allLibraries)
+    # Add subdirectories
+    add_subdirectory(common/src)
+    add_subdirectory(windows/src)
 
-# Include headers
-target_include_directories(gorgot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    # Add libraries
+    target_link_libraries(gorgot PRIVATE
+        allLibraries
+        windowsLibrary
+        OpenSSL::Crypto
+        m
+    )
+endif()
 
 # Set compiler flags
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -O3 -march=native")

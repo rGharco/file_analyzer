@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include "../include/file_context.h"
+#include <stdarg.h>
 
 #if _WIN32
 #include <windows.h>
@@ -19,8 +19,6 @@ void print_success(const char* message);
 void print_checkpoint(const char* message);
 void print_warning(const char* messsage);
 
-void print_coff_header(const File_Context* file_context);
-void print_optional_header(const File_Context* file_context);
-void print_section_headers(const File_Context* fc);
+int checkArgs(const int count, ...);
 
 #endif
